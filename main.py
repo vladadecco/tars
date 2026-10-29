@@ -41,7 +41,7 @@ SETTINGS_KEYS = ["anthropic_api_key", "model", "analysis_model", "web_search", "
 SECRET_KEYS = ("anthropic_api_key", "gmail_app_password", "github_token", "gemini_api_key", "elevenlabs_api_key")
 
 
-GEMINI_CANDIDATES = ["Arlo", "Algieba", "Charon", "Gacrux", "Sadaltager", "Iapetus"]
+GEMINI_CANDIDATES = ["Enceladus", "Arlo", "Algieba", "Charon", "Gacrux", "Sadaltager", "Iapetus"]
 
 
 class Api:

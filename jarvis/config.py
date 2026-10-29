@@ -44,7 +44,7 @@ DEFAULTS = {
     "voice_accent": "neutru, din România",
     "gemini_api_key": "",
     "gemini_tts_model": "gemini-3.8-flash-tts",   # gratuit pe cheia din AI Studio
-    "gemini_voice": "Arlo",
+    "gemini_voice": "Enceladus",
     "elevenlabs_api_key": "",
     "elevenlabs_voice_id": "JBFqnCBsd6RMkjVDRZzb",
     "elevenlabs_model": "eleven_multilingual_v2",   # sau eleven_v3 (mai expresiv)
@@ -99,9 +99,9 @@ class Config:
         if self.data.get("tts_voice_en") == "en-GB-RyanNeural" and not self.data.get("_o_voce"):
             self.data["tts_voice_en"] = ""
             self.data["_o_voce"] = True
-        if not self.data.get("_arlo"):  # vocea aleasă de Vlad
-            self.data["gemini_voice"] = "Arlo"
-            self.data["_arlo"] = True
+        if not self.data.get("_enceladus"):  # vocea aleasă de Vlad
+            self.data["gemini_voice"] = "Enceladus"
+            self.data["_enceladus"] = True
         if not self.data.get("_asr_auto"):
             if self.data.get("whisper_model") == "small":
                 self.data["whisper_model"] = "auto"
