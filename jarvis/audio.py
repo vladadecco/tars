@@ -506,7 +506,7 @@ class Mouth:
         engine = self.cfg["tts_engine"]
         try:
             plain = text.replace("⟦", "").replace("⟧", "")
-            if engine == "gemini" and self.cfg["gemini_api_key"]:
+            if engine == "gemini" and self.cfg["gemini_api_key"] and time.time() > getattr(self, "_gemini_pause", 0):
                 return self._synth_gemini(plain)
             if engine == "elevenlabs" and self.cfg["elevenlabs_api_key"]:
                 return self._synth_elevenlabs(plain)
@@ -541,7 +541,9 @@ class Mouth:
                 break
             except urllib.error.HTTPError as e:
                 last = e
-                if e.code not in (400, 404):  # 429 = limită gratuită atinsă; nu insistăm
+                if e.code == 429:  # limita gratuită atinsă: 15 minute pe vocea de rezervă, fără așteptări
+                    self._gemini_pause = time.time() + 900
+                if e.code not in (400, 404):
                     raise
         else:
             raise last
