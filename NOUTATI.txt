@@ -1,3 +1,5 @@
+Versiunea 2026.10.29.19: butonul roșu de oprire oprește acum și seria de variante de voce.
+
 Versiunea 2026.10.29.18: vocea mea principală este acum Enceladus.
 
 Versiunea 2026.10.29.17: noua mea voce principală este Arlo, pe Gemini.

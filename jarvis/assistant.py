@@ -95,6 +95,16 @@ class Assistant:
     def stop_speaking(self):
         if self.mouth:
             self.mouth.stop()
+        # golim ce mai era la rând de spus
+        try:
+            while True:
+                item = self.requests.get_nowait()
+                if item[0] != "say":
+                    self.requests.put(item)
+                    break
+                item[4].set()
+        except queue.Empty:
+            pass
 
     def _speak(self, text: str):
         if self.cfg["speak_replies"] and self.mouth:

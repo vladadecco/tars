@@ -109,6 +109,7 @@ class Api:
         return True
 
     def stop(self):
+        self._cancel_compare = True  # oprește și seria de variante, nu doar fraza curentă
         self._a.stop_speaking()
         return True
 
@@ -203,8 +204,11 @@ class Api:
         def run():
             old_engine, old_voice = a.cfg["tts_engine"], a.cfg["gemini_voice"]
             a.cfg.data["tts_engine"] = "gemini"
+            self._cancel_compare = False
             try:
                 for i, v in enumerate(GEMINI_CANDIDATES, 1):
+                    if self._cancel_compare:
+                        break
                     a.cfg.data["gemini_voice"] = v
                     a.store.set_status("vorbeste", f"varianta {i}: {v}")
                     a.mouth.say(f"Varianta {i}. Bună ziua, domnule. Sistemele sunt pregătite, "
