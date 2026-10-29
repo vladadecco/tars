@@ -1,3 +1,5 @@
+Versiunea 2026.10.29.9: răspund mult mai repede. Încep să vorbesc de la prima propoziție, înțeleg mai rapid ce spuneți și folosesc un model mai iute pentru conversație.
+
 Versiunea 2026.10.29.8: repornesc mai sigur după actualizări, iar fereastra se reîncarcă mereu la versiunea nouă.
 
 Versiunea 2026.10.29.7: difuzorul ales în Setări se aplică imediat.

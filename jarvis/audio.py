@@ -220,7 +220,8 @@ class Ear:
         device = self.cfg["whisper_device"]
         try:
             self.whisper = WhisperModel(self.cfg["whisper_model"], device=device,
-                                        compute_type="int8" if device == "cpu" else "float16")
+                                        compute_type="int8" if device == "cpu" else "float16",
+                                        cpu_threads=max(2, (os.cpu_count() or 4) - 1))
         except Exception:
             self.whisper = WhisperModel(self.cfg["whisper_model"], device="cpu", compute_type="int8")
 
@@ -244,7 +245,7 @@ class Ear:
         return None
 
     # ---------------------------------------------------------------- înregistrare
-    def record(self, start_timeout=6.0, max_seconds=30.0, silence=1.1, stop: threading.Event | None = None):
+    def record(self, start_timeout=6.0, max_seconds=30.0, silence=0.8, stop: threading.Event | None = None):
         """Înregistrează până când utilizatorul tace. Întoarce None dacă nu a vorbit."""
         threshold = max(self.noise * 2.8, 350.0)
         frames, speaking, started_at = [], False, None
@@ -280,7 +281,8 @@ class Ear:
 
     def transcribe(self, audio) -> str:
         segments, _ = self.whisper.transcribe(
-            audio, language="ro", beam_size=5, vad_filter=True,
+            audio, language="ro", beam_size=1, best_of=1, vad_filter=True, without_timestamps=True,
+            condition_on_previous_text=False,
             initial_prompt="Salut TARS. Ce s-a întâmplat peste noapte? Adaugă un task pentru mâine la ora zece. "
                            "Proiectul de printuri 3D, site-uri, PassatGauge, PFA.")
         text = " ".join(s.text.strip() for s in segments).strip()
@@ -348,6 +350,91 @@ def decode_mp3(mp3: bytes):
     import miniaudio
     dec = miniaudio.decode(mp3, output_format=miniaudio.SampleFormat.SIGNED16, nchannels=1, sample_rate=24000)
     return np.frombuffer(dec.samples, dtype=np.int16).astype(np.float32) / 32768.0
+
+
+class SpeechSession:
+    """Primește textul pe bucăți și vorbește fiecare propoziție de îndată ce e gata,
+    sintetizând următoarea în timp ce o redă pe cea curentă."""
+    END = re.compile(r"[.!?…:;]\s")
+
+    def __init__(self, mouth):
+        self.m = mouth
+        self.buf = ""
+        self.texts = queue.Queue()
+        self.audio = queue.Queue(maxsize=3)
+        self.started = False
+        self.spoken_any = False
+
+    def _start(self):
+        if self.started:
+            return
+        self.started = True
+        self.m._stop.clear()
+        self.m.speaking = True
+        if self.m.mic:
+            self.m.mic.muted = True
+        self.t1 = threading.Thread(target=self._synth_loop, daemon=True)
+        self.t2 = threading.Thread(target=self._play_loop, daemon=True)
+        self.t1.start()
+        self.t2.start()
+
+    def feed(self, chunk: str):
+        self.buf += chunk
+        while True:
+            m = self.END.search(self.buf)
+            # nu tăiem fraze prea scurte (ex. „Dl.”), dar nici nu așteptăm prea mult
+            if not m or (m.end() < 18 and len(self.buf) < 200):
+                break
+            sent, self.buf = self.buf[:m.end()].strip(), self.buf[m.end():]
+            self._put(sent)
+
+    def _put(self, sent: str):
+        sent = re.sub(r"[*#`_]+", "", sent).strip()
+        if not sent:
+            return
+        self._start()
+        self.texts.put(sent)
+
+    def _synth_loop(self):
+        while True:
+            t = self.texts.get()
+            if t is None or self.m._stop.is_set():
+                self.audio.put(None)
+                return
+            try:
+                self.audio.put((t, self.m._synth(t)))
+            except Exception as e:
+                self.audio.put((t, e))
+
+    def _play_loop(self):
+        while True:
+            item = self.audio.get()
+            if item is None:
+                return
+            if self.m._stop.is_set():
+                continue
+            t, a = item
+            self.spoken_any = True
+            if isinstance(a, np.ndarray):
+                self.m.sd.play(a, 24000)
+                self.m.sd.wait()
+            else:
+                self.m._fallback(t)
+
+    def finish(self):
+        """Spune ce a mai rămas și așteaptă să termine."""
+        if self.buf.strip():
+            self._put(self.buf)
+            self.buf = ""
+        if not self.started:
+            return
+        self.texts.put(None)
+        self.t2.join(timeout=300)
+        self.m.speaking = False
+        if self.m.mic:
+            time.sleep(0.25)
+            self.m.mic.flush()
+            self.m.mic.muted = False
 
 
 class Mouth:
@@ -463,6 +550,9 @@ class Mouth:
             self.sd.stop()
         except Exception:
             pass
+
+    def session(self):
+        return SpeechSession(self)
 
     def say(self, text: str):
         if not text:

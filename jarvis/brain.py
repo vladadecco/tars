@@ -103,15 +103,22 @@ class Brain:
         n = now()
         notes = "; ".join(x["text"] for x in self.store.data["notes"][-40:]) or "nimic încă"
         projects = "; ".join(f"{p['name']} ({p['stage']}, {p['progress']}%)" for p in self.store.data["projects"])
-        return SYSTEM.format(name=self.cfg["assistant_name"], user=self.cfg["user_name"], city=self.cfg["city"],
-                             weekday=ZILE[n.weekday()], date=n.strftime("%d.%m.%Y"), time=n.strftime("%H:%M"),
+        full = SYSTEM.format(name=self.cfg["assistant_name"], user=self.cfg["user_name"], city=self.cfg["city"],
+                             weekday="{weekday}", date="{date}", time="{time}",
                              projects=projects, notes=notes, humor=self.cfg["humor"],
                              phonetic=PHONETIC_EDGE if self.cfg["tts_engine"] == "edge" else PHONETIC_NEURAL)
+        # partea care nu se schimbă de la o întrebare la alta stă în cache (răspuns mai rapid și mai ieftin)
+        cut = full.index("Acum este {weekday}")
+        static, dynamic = full[:cut], full[cut:].format(
+            weekday=ZILE[n.weekday()], date=n.strftime("%d.%m.%Y"), time=n.strftime("%H:%M"))
+        return [{"type": "text", "text": static, "cache_control": {"type": "ephemeral"}},
+                {"type": "text", "text": dynamic}]
 
     def _tools(self):
         tools = self.tools.schemas()
         if self.cfg["web_search"] and WEB_SEARCH_OK["ok"]:
             tools.append(web_search_tool(3))
+        tools[-1] = dict(tools[-1], cache_control={"type": "ephemeral"})
         return tools
 
     def _trim(self):
@@ -130,24 +137,30 @@ class Brain:
         with self._lock:
             self.history = []
 
-    def ask(self, text: str, on_status=None) -> str:
-        """Trimite un mesaj și întoarce răspunsul de spus."""
+    def _call(self, on_text=None):
+        """Un apel la Claude, cu răspunsul primit pe bucăți (streaming) ca vocea să poată porni imediat."""
+        kwargs = dict(model=self.cfg["model"], max_tokens=1200, system=self._system(),
+                      tools=self._tools(), messages=self.history)
+        with self.client().messages.stream(**kwargs) as stream:
+            for chunk in stream.text_stream:
+                if on_text:
+                    on_text(chunk)
+            return stream.get_final_message()
+
+    def ask(self, text: str, on_status=None, on_text=None) -> str:
+        """Trimite un mesaj și întoarce răspunsul de spus. on_text primește textul pe măsură ce vine."""
         with self._lock:
             self.history.append({"role": "user", "content": text})
             reply_parts = []
             try:
                 for _ in range(12):
                     try:
-                        resp = self.client().messages.create(
-                            model=self.cfg["model"], max_tokens=1500, system=self._system(),
-                            tools=self._tools(), messages=self.history)
+                        resp = self._call(on_text)
                     except Exception as e:
                         if not (is_web_search_error(e) and WEB_SEARCH_OK["ok"]):
                             raise
                         WEB_SEARCH_OK["ok"] = False  # merg mai departe fără căutare pe web
-                        resp = self.client().messages.create(
-                            model=self.cfg["model"], max_tokens=1500, system=self._system(),
-                            tools=self._tools(), messages=self.history)
+                        resp = self._call(on_text)
                     if self.history and self.history[-1]["role"] == "assistant":
                         # continuare după pause_turn: lipim în același mesaj
                         self.history[-1] = {"role": "assistant",
@@ -156,6 +169,7 @@ class Brain:
                         self.history.append({"role": "assistant", "content": resp.content})
                     texts = [b.text for b in resp.content if b.type == "text"]
                     if resp.stop_reason == "tool_use":
+                        reply_parts.extend(texts)
                         results = []
                         for b in resp.content:
                             if b.type == "tool_use":
@@ -178,6 +192,6 @@ class Brain:
             finally:
                 self._trim()
             import re
-            reply = re.sub(r"\s+", " ", "".join(reply_parts)).strip()
+            reply = re.sub(r"\s+", " ", " ".join(reply_parts)).strip()
             reply = re.sub(r"[*#`_]+", "", reply)  # fără urme de Markdown în voce
             return reply or "Gata."

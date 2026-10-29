@@ -12,7 +12,7 @@ CONFIG_PATH = DATA_DIR / "config.json"
 DEFAULTS = {
     # Creierul
     "anthropic_api_key": "",
-    "model": "claude-sonnet-5-5",
+    "model": "claude-haiku-5-5",           # conversație: rapid. Sonnet = mai profund, dar mai lent
     "analysis_model": "claude-opus-5-5",   # pentru analize strategice și cercetare
     "web_search": True,
     # Utilizatorul
@@ -91,6 +91,9 @@ class Config:
                 self.data.update(saved)
             except Exception:
                 pass
+        if self.data.get("model") == "claude-sonnet-5-5" and not self.data.get("_model_ales"):
+            self.data["model"] = DEFAULTS["model"]  # o singură dată: trecem pe modelul rapid
+            self.data["_model_ales"] = True
         if self.data.get("gemini_tts_model") == "gemini-2.5-flash-preview-tts":
             self.data["gemini_tts_model"] = DEFAULTS["gemini_tts_model"]
         if self.data.get("tts_rate") in ("+8%", "+0%"):  # ritm calm, ~130-150 cuvinte/minut

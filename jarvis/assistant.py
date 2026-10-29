@@ -100,12 +100,22 @@ class Assistant:
                     continue
                 self.store.chat("tu", text)
                 self.store.set_status("gandeste", "mă gândesc")
-                reply = self.brain.ask(text, on_status=lambda s: self.store.set_status("gandeste", s))
+                sess = self.mouth.session() if (speak and self.cfg["speak_replies"] and self.mouth) else None
+
+                def on_text(chunk, sess=sess):
+                    if sess is not None:
+                        if not sess.started:
+                            self.store.set_status("vorbeste", "")
+                        sess.feed(chunk)
+
+                reply = self.brain.ask(text, on_status=lambda s: self.store.set_status("gandeste", s), on_text=on_text)
                 self.store.chat("jarvis", reply)
                 if briefing:
                     self.store.set_briefing(reply)
-                if speak:
-                    self._speak(reply)
+                if sess is not None:
+                    sess.finish()
+                    if not sess.spoken_any:
+                        self._speak(reply)
             except Exception as e:
                 log.error("eroare: %s\n%s", e, traceback.format_exc())
                 msg = self._friendly_error(e)
