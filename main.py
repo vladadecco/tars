@@ -371,12 +371,14 @@ def main():
             wait_for_pid(int(sys.argv[sys.argv.index("--dupa-actualizare") + 1]))
         except Exception:
             pass
+        import time
+        time.sleep(4)  # lăsăm procesele vechi ale ferestrei (WebView2) să elibereze folderul
     import webview
     a = Assistant()
     api = Api(a)
     geo = window_geometry(webview, a.cfg)
     window = webview.create_window(
-        "TARS", url=str(ROOT / "ui" / "index.html"), js_api=api,
+        "TARS", url=(ROOT / "ui" / "index.html").as_uri() + "?v=" + local_version(), js_api=api,
         min_size=(380, 640), background_color="#03070d", on_top=bool(a.cfg["always_on_top"]),
         text_select=True, **geo)
     api._window = window
@@ -387,4 +389,16 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception:
+        import traceback
+        log.error("TARS s-a oprit la pornire:\n%s", traceback.format_exc())
+        # încă o încercare, cu un folder nou pentru fereastră (dacă cel vechi era blocat)
+        try:
+            import shutil
+            shutil.rmtree(DATA_DIR / "webview", ignore_errors=True)
+            main()
+        except Exception:
+            log.error("A doua pornire a eșuat:\n%s", traceback.format_exc())
+            raise
