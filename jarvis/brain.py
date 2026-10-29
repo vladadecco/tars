@@ -4,6 +4,19 @@ import threading
 from .store import now
 from .tools import ZILE
 
+WEB_SEARCH_OK = {"ok": True}
+
+
+def web_search_tool(max_uses: int) -> dict:
+    # Doar fusul orar: API-ul nu acceptă codul de țară RO la locație.
+    return {"type": "web_search_20250305", "name": "web_search", "max_uses": max_uses,
+            "user_location": {"type": "approximate", "timezone": "Europe/Bucharest"}}
+
+
+def is_web_search_error(e) -> bool:
+    s = str(e)
+    return "400" in s and ("web_search" in s or "user_location" in s)
+
 TOOL_LABELS = {
     "briefing_noapte": "strâng ce s-a întâmplat peste noapte",
     "vreme": "verific vremea", "mailuri": "citesc mailurile", "calendar": "mă uit în calendar",
@@ -90,10 +103,8 @@ class Brain:
 
     def _tools(self):
         tools = self.tools.schemas()
-        if self.cfg["web_search"]:
-            tools.append({"type": "web_search_20250305", "name": "web_search", "max_uses": 3,
-                          "user_location": {"type": "approximate", "country": "RO",
-                                            "timezone": "Europe/Bucharest", "city": self.cfg["city"]}})
+        if self.cfg["web_search"] and WEB_SEARCH_OK["ok"]:
+            tools.append(web_search_tool(3))
         return tools
 
     def _trim(self):
@@ -119,9 +130,17 @@ class Brain:
             reply_parts = []
             try:
                 for _ in range(12):
-                    resp = self.client().messages.create(
-                        model=self.cfg["model"], max_tokens=1500, system=self._system(),
-                        tools=self._tools(), messages=self.history)
+                    try:
+                        resp = self.client().messages.create(
+                            model=self.cfg["model"], max_tokens=1500, system=self._system(),
+                            tools=self._tools(), messages=self.history)
+                    except Exception as e:
+                        if not (is_web_search_error(e) and WEB_SEARCH_OK["ok"]):
+                            raise
+                        WEB_SEARCH_OK["ok"] = False  # merg mai departe fără căutare pe web
+                        resp = self.client().messages.create(
+                            model=self.cfg["model"], max_tokens=1500, system=self._system(),
+                            tools=self._tools(), messages=self.history)
                     if self.history and self.history[-1]["role"] == "assistant":
                         # continuare după pause_turn: lipim în același mesaj
                         self.history[-1] = {"role": "assistant",

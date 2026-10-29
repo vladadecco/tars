@@ -31,6 +31,8 @@ DEFAULTS = {
     # Știri
     "news_topics": "România, Gorj, tehnologie, auto",
     # Voce
+    "mic_device": "",            # gol = automat; altfel o bucată din numele microfonului
+    "speaker_device": "",
     "wake_word_enabled": True,
     "wake_word": "tars",          # "tars" (Hey TARS) sau "jarvis" (Hey Jarvis)
     "wake_word_sensitivity": 0.5,

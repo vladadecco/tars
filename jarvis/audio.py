@@ -30,19 +30,91 @@ BEEP_LISTEN = tone([880, 1320])
 BEEP_DONE = tone([990, 660], dur=0.07)
 
 
+def _pick(sd, kind: str, wanted: str = ""):
+    """Găsește un dispozitiv audio valid (kind = 'input' / 'output').
+    Ordinea: numele din setări, implicitul Windows, implicitul fiecărui sistem audio, primul care merge."""
+    devs = sd.query_devices()
+    key = "max_input_channels" if kind == "input" else "max_output_channels"
+    ok = lambda i: 0 <= i < len(devs) and devs[i][key] > 0
+    if wanted:
+        for i, d in enumerate(devs):
+            if wanted.lower() in d["name"].lower() and d[key] > 0:
+                return i
+    try:
+        d = sd.default.device[0 if kind == "input" else 1]
+        if d is not None and ok(int(d)):
+            return int(d)
+    except Exception:
+        pass
+    apis = sd.query_hostapis()
+    order = sorted(range(len(apis)), key=lambda a: 0 if "MME" in apis[a]["name"] else 1)
+    for a in order:
+        d = apis[a].get(f"default_{kind}_device", -1)
+        if ok(d):
+            return d
+    for i in range(len(devs)):
+        if ok(i):
+            return i
+    raise RuntimeError("Nu am găsit niciun " + ("microfon" if kind == "input" else "difuzor") + " în Windows.")
+
+
+def list_devices():
+    import sounddevice as sd
+    devs = sd.query_devices()
+    apis = sd.query_hostapis()
+    out = {"input": [], "output": []}
+    seen = {"input": set(), "output": set()}
+    for d in devs:
+        api = apis[d["hostapi"]]["name"]
+        if "MME" not in api:  # o singură variantă din fiecare, cele mai compatibile
+            continue
+        for kind, key in (("input", "max_input_channels"), ("output", "max_output_channels")):
+            if d[key] > 0 and d["name"] not in seen[kind]:
+                seen[kind].add(d["name"])
+                out[kind].append(d["name"])
+    return out
+
+
 class Mic:
-    def __init__(self):
+    def __init__(self, wanted: str = "", wanted_out: str = ""):
         import sounddevice as sd
         self.sd = sd
         self.q = queue.Queue(maxsize=400)
         self.muted = False
         self.level = 0.0
-        self.stream = sd.InputStream(samplerate=SR, channels=1, dtype="int16", blocksize=FRAME,
-                                     callback=self._cb)
+        self.device = _pick(sd, "input", wanted)
+        try:
+            out = _pick(sd, "output", wanted_out)
+        except Exception:
+            out = None
+        sd.default.device = (self.device, out)
+        self.name = sd.query_devices(self.device)["name"]
+        self._buf = np.zeros(0, dtype=np.int16)
+        try:
+            self.rate = SR
+            self.stream = sd.InputStream(device=self.device, samplerate=SR, channels=1, dtype="int16",
+                                         blocksize=FRAME, callback=self._cb)
+        except Exception:
+            # microfonul nu acceptă 16 kHz: înregistrăm la rata lui și convertim
+            self.rate = int(sd.query_devices(self.device)["default_samplerate"])
+            self.stream = sd.InputStream(device=self.device, samplerate=self.rate, channels=1, dtype="int16",
+                                         blocksize=int(FRAME * self.rate / SR), callback=self._cb)
         self.stream.start()
 
+    def _resample(self, data):
+        if self.rate == SR:
+            return data
+        n = int(round(len(data) * SR / self.rate))
+        x = np.linspace(0, len(data) - 1, n)
+        return np.interp(x, np.arange(len(data)), data.astype(np.float32)).astype(np.int16)
+
     def _cb(self, indata, frames, t, status):
-        data = indata[:, 0].copy()
+        data = self._resample(indata[:, 0].copy())
+        if len(data) != FRAME:
+            self._buf = np.concatenate([self._buf, data])
+            if len(self._buf) < FRAME:
+                return
+            data, self._buf = self._buf[:FRAME], self._buf[FRAME:]
         self.level = float(np.sqrt(np.mean(data.astype(np.float32) ** 2)))
         if self.muted:
             return

@@ -1,3 +1,5 @@
+Versiunea 2026.10.29.2: am reparat căutarea pe internet și pornirea microfonului. În Setări puteți alege acum microfonul și difuzorul.
+
 Versiunea 2026.10.29.1: actualizări automate. De acum mă pot actualiza singur, fără să descărcați nimic.
 
 Versiunea 2026.10.29.0: prima versiune, cu numele TARS și trezire la „TARS”.

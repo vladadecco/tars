@@ -133,7 +133,8 @@ class Assistant:
     def _voice_init_and_loop(self):
         try:
             from .audio import Mic, Ear, Mouth, BEEP_LISTEN, BEEP_DONE
-            self.mic = Mic()
+            self.mic = Mic(self.cfg["mic_device"], self.cfg["speaker_device"])
+            self.store.log(f"Microfon: {self.mic.name}", "info")
             self.mouth = Mouth(self.cfg, self.mic)
             self.ear = Ear(self.cfg, self.mic, on_status=self.store.set_status)
             self.ear.load()

@@ -32,7 +32,7 @@ from jarvis.updater import local_version, wait_for_pid  # noqa: E402
 SETTINGS_KEYS = ["anthropic_api_key", "model", "analysis_model", "web_search", "user_name", "city",
                  "gmail_address", "gmail_app_password", "calendar_ics_url", "news_topics",
                  "wake_word_enabled", "wake_word", "wake_word_sensitivity", "push_to_talk_hotkey", "whisper_model",
-                 "whisper_device", "tts_voice", "tts_rate", "speak_replies", "auto_briefing", "briefing_time", "humor",
+                 "whisper_device", "tts_voice", "tts_rate", "speak_replies", "auto_briefing", "briefing_time", "humor", "mic_device", "speaker_device",
                  "always_on_top", "update_repo", "update_branch", "github_token", "auto_update"]
 
 
@@ -183,6 +183,13 @@ class Api:
         s.save()
         return True
 
+    def audio_devices(self):
+        try:
+            from jarvis.audio import list_devices
+            return list_devices()
+        except Exception as e:
+            return {"input": [], "output": [], "error": str(e)}
+
     def update_now(self):
         if not self._a.updater.configured:
             return "Pune întâi depozitul GitHub în Setări."
@@ -243,7 +250,7 @@ class Api:
                 pass
         self._a.idle_status()
         threading_refresh(self._a)
-        voice_keys = ("wake_word_enabled", "wake_word", "wake_word_sensitivity", "whisper_model",
+        voice_keys = ("mic_device", "speaker_device", "wake_word_enabled", "wake_word", "wake_word_sensitivity", "whisper_model",
                       "whisper_device", "push_to_talk_hotkey")
         return {"ok": True, "restart": any(k in clean and clean[k] != before.get(k) for k in voice_keys)}
 

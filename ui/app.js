@@ -370,6 +370,13 @@ function bind() {
   $("#btnSettings").onclick = async () => {
     const s = await api.get_settings();
     const f = $("#setForm");
+    try {
+      const dev = await api.audio_devices();
+      for (const [sel, list] of [["#selMic", dev.input || []], ["#selSpk", dev.output || []]]) {
+        const el = $(sel); el.length = 1;
+        list.forEach((n) => el.add(new Option(n, n)));
+      }
+    } catch (e) {}
     for (const [k, v] of Object.entries(s)) { const el = f.elements[k]; if (!el) continue; if (el.type === "checkbox") el.checked = !!v; else el.value = v ?? ""; }
     $("#setVersion").textContent = s.version || "—";
     $("#setMsg").textContent = ""; openOverlay("#setOverlay");

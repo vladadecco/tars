@@ -5,6 +5,7 @@ import threading
 import uuid
 
 from .store import now
+from .brain import web_search_tool, is_web_search_error
 
 CONSULTANT_PROMPT = """Acționează ca un Consultant Strategic de Elită, Data Scientist și Inovator Disruptiv. \
 Scopul tău este să analizezi proiectul meu și să dezvolți o strategie complet inedită, unică pe piață, \
@@ -116,16 +117,21 @@ class Strategist:
         model = self.cfg.get("analysis_model") or self.cfg["model"]
         tools = []
         if self.cfg["web_search"]:
-            tools.append({"type": "web_search_20250305", "name": "web_search", "max_uses": searches,
-                          "user_location": {"type": "approximate", "country": "RO",
-                                            "timezone": "Europe/Bucharest", "city": self.cfg["city"]}})
+            tools.append(web_search_tool(searches))
         messages = [{"role": "user", "content": prompt}]
         text_all, sources_all = "", []
         for _ in range(6):
             kwargs = dict(model=model, max_tokens=max_tokens, messages=messages)
             if tools:
                 kwargs["tools"] = tools
-            resp = client.messages.create(**kwargs)
+            try:
+                resp = client.messages.create(**kwargs)
+            except Exception as e:
+                if not (is_web_search_error(e) and "tools" in kwargs):
+                    raise
+                kwargs.pop("tools")
+                tools = []
+                resp = client.messages.create(**kwargs)
             text, src = _extract(resp)
             text_all += text
             sources_all += [s for s in src if s not in sources_all]
