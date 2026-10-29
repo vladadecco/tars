@@ -328,6 +328,14 @@ class Api:
                 pass
         self._a.idle_status()
         threading_refresh(self._a)
+        if "speaker_device" in clean and clean["speaker_device"] != before.get("speaker_device") and self._a.mic:
+            try:  # difuzorul se schimbă pe loc, fără repornire
+                from jarvis.audio import _pick
+                sd = self._a.mic.sd
+                sd.default.device = (self._a.mic.device, _pick(sd, "output", clean["speaker_device"]))
+                before["speaker_device"] = clean["speaker_device"]
+            except Exception as e:
+                self._a.store.log(f"Difuzorul nu s-a putut schimba: {e}", "error")
         voice_keys = ("mic_device", "speaker_device", "wake_word_enabled", "wake_word", "wake_word_sensitivity", "whisper_model",
                       "whisper_device", "push_to_talk_hotkey")
         return {"ok": True, "restart": any(k in clean and clean[k] != before.get(k) for k in voice_keys)}
