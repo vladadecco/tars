@@ -1,3 +1,5 @@
+Versiunea 2026.10.29.26: vorbesc mai legat. Pauzele de la virgulă sunt mai scurte și nu mai sunt goluri între bucățile de frază.
+
 Versiunea 2026.10.29.25: vă înțeleg mai bine. Nu mai pierd începutul comenzii de după „TARS”, ridic volumul când microfonul e încet și vă las puțin mai mult timp să terminați fraza.
 
 Versiunea 2026.10.29.24: când îmi spuneți numele, pregătesc deja legătura cu Claude cât timp vorbiți, deci răspund mai repede.

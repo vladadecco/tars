@@ -357,7 +357,8 @@ VOICE_STYLE = (
     "Citește textul de mai jos ca un voice-over profesionist, nativ și uman, în limba română, "
     "cu accent {accent}. Livrare fluidă, caldă și naturală; evită complet tonul robotic, plat sau artificial. "
     "Respectă cu strictețe fonetica, topica și muzicalitatea limbii române. "
-    "Fă pauze scurte la virgulă și pauze de respirație firești la finalul fiecărei fraze. "
+    "La virgulă fă doar o pauză foarte scurtă, abia perceptibilă, fără să rupi fraza; "
+    "la finalul frazei, o pauză de respirație firească, dar scurtă. Vorbirea curge legat. "
     "Ritm conversațional, moderat, aproximativ 130–150 de cuvinte pe minut. "
     "Accentuează cuvintele cheie, exact cum ar face un om într-o discuție reală. "
     "Pune accentul pe silaba corectă în fiecare cuvânt românesc, pronunță clar ă, â, î, ș, ț, "
@@ -527,24 +528,69 @@ class SpeechSession:
                 self.audio.put((t, e))
 
     def _play_loop(self):
-        while True:
-            item = self.audio.get()
-            if item is None:
-                return
-            if self.m._stop.is_set():
-                continue
-            t, a = item
-            self.spoken_any = True
-            if self.first_audio_at is None:
-                self.first_audio_at = time.time()
-            if isinstance(a, np.ndarray):
-                self.m.sd.play(a, 24000)
-                self.m.sd.wait()
-            elif hasattr(a, "__next__"):
-                if not self.m.play_stream(a):
+        """Redă totul printr-un singur flux audio: fără goluri între bucăți."""
+        out = None
+        try:
+            out = self.m.sd.OutputStream(samplerate=24000, channels=1, dtype="float32")
+            out.start()
+        except Exception:
+            out = None
+        try:
+            while True:
+                item = self.audio.get()
+                if item is None:
+                    return
+                if self.m._stop.is_set():
+                    continue
+                t, a = item
+                self.spoken_any = True
+                if self.first_audio_at is None:
+                    self.first_audio_at = time.time()
+                if isinstance(a, np.ndarray):
+                    a = _trim_silence(a, pad=900)  # fără liniște lungă la capete (pauza de la virgulă)
+                    if out is not None:
+                        self._write(out, a)
+                    else:
+                        self.m.sd.play(a, 24000)
+                        self.m.sd.wait()
+                elif hasattr(a, "__next__"):
+                    started = False
+                    got = False
+                    for chunk in a:
+                        if self.m._stop.is_set():
+                            break
+                        if not started:  # tăiem liniștea de la începutul fluxului
+                            idx = np.where(np.abs(chunk) > 0.012)[0]
+                            if len(idx) == 0:
+                                continue
+                            chunk = chunk[max(0, idx[0] - 900):]
+                            started = True
+                        got = True
+                        if out is not None:
+                            self._write(out, chunk)
+                        else:
+                            self.m.sd.play(chunk, 24000)
+                            self.m.sd.wait()
+                    if not got:
+                        self.m._fallback(t)
+                else:
                     self.m._fallback(t)
-            else:
-                self.m._fallback(t)
+        finally:
+            if out is not None:
+                try:
+                    if not self.m._stop.is_set():
+                        time.sleep(0.15)  # lasă ultima bucată să se audă complet
+                    out.stop()
+                    out.close()
+                except Exception:
+                    pass
+
+    def _write(self, out, a):
+        step = 2400  # bucăți de 0,1 s: butonul de oprire răspunde imediat
+        for i in range(0, len(a), step):
+            if self.m._stop.is_set():
+                return
+            out.write(a[i:i + step].reshape(-1, 1).astype(np.float32))
 
     def finish(self):
         """Spune ce a mai rămas și așteaptă să termine."""
