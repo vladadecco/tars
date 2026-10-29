@@ -569,7 +569,7 @@ class Mouth:
 
         # bucăți: [(text, e_engleza)]; engleza merge cu o voce englezească, restul cu cea românească
         parts = [(p[1:-1] if p.startswith("⟦") else p, p.startswith("⟦"))
-                 for p in re.split(r"(⟦[^⟧]*⟧)", text) if p.strip(" ,")]
+                 for p in re.split(r"(⟦[^⟧]*⟧)", text) if re.search(r"\w", p)]
         if not parts:
             parts = [(text.replace("⟦", "").replace("⟧", ""), False)]
 
@@ -578,9 +578,13 @@ class Mouth:
             com = edge_tts.Communicate(t.strip(), voice, rate=self.cfg["tts_rate"],
                                        pitch=self.cfg["tts_pitch_en"] if en else self.cfg["tts_pitch"])
             buf = io.BytesIO()
-            async for chunk in com.stream():
-                if chunk["type"] == "audio":
-                    buf.write(chunk["data"])
+            try:
+                async for chunk in com.stream():
+                    if chunk["type"] == "audio":
+                        buf.write(chunk["data"])
+            except Exception:
+                if len(parts) == 1:
+                    raise
             return buf.getvalue()
 
         async def go():
