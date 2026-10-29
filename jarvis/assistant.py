@@ -126,6 +126,8 @@ class Assistant:
                     continue
                 self.store.chat("tu", text)
                 self.store.set_status("gandeste", "mă gândesc")
+                if not getattr(self, "_timing", None):  # întrebare scrisă: cronometrăm de acum
+                    self._timing = {"end": time.time(), "asr": 0.0}
                 sess = self.mouth.session() if (speak and self.cfg["speak_replies"] and self.mouth) else None
 
                 def on_text(chunk, sess=sess):

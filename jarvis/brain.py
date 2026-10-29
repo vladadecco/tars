@@ -148,7 +148,8 @@ class Brain:
     def _call(self, on_text=None):
         """Un apel la Claude, cu răspunsul primit pe bucăți (streaming) ca vocea să poată porni imediat."""
         kwargs = dict(model=self.cfg["model"], max_tokens=1200, system=self._system(),
-                      tools=self._tools(), messages=self.history)
+                      tools=self._tools(), messages=self.history,
+                      thinking={"type": "disabled"})  # conversație: fără „gândire” extinsă = răspuns imediat
         with self.client().messages.stream(**kwargs) as stream:
             for chunk in stream.text_stream:
                 if on_text:
@@ -165,10 +166,16 @@ class Brain:
                     try:
                         resp = self._call(on_text)
                     except Exception as e:
-                        if not (is_web_search_error(e) and WEB_SEARCH_OK["ok"]):
+                        if "signature" in str(e) or "thinking" in str(e):
+                            # istoric incompatibil (ex. după schimbarea modelului): o luăm de la capăt
+                            self.history = [{"role": "user", "content": text}]
+                            resp = self._call(on_text)
+                        elif not (is_web_search_error(e) and WEB_SEARCH_OK["ok"]):
                             raise
-                        WEB_SEARCH_OK["ok"] = False  # merg mai departe fără căutare pe web
-                        resp = self._call(on_text)
+                        else:
+                            WEB_SEARCH_OK["ok"] = False
+                            resp = self._call(on_text)
+                        e = None
                     if self.history and self.history[-1]["role"] == "assistant":
                         # continuare după pause_turn: lipim în același mesaj
                         self.history[-1] = {"role": "assistant",
