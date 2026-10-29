@@ -484,6 +484,36 @@ def decode_mp3(mp3: bytes):
     return np.frombuffer(dec.samples, dtype=np.int16).astype(np.float32) / 32768.0
 
 
+_PIPER_LOCK = threading.Lock()
+PIPER_DIR = MODELS_DIR / "piper"
+
+
+def piper_model_path(name: str):
+    """Modelul Piper din modele/piper. Vocile publice (ex. ro_RO-mihai-medium) se descarcă singure;
+    vocea antrenată de noi se pune aici (fișierele .onnx și .onnx.json)."""
+    import urllib.request
+    PIPER_DIR.mkdir(parents=True, exist_ok=True)
+    onnx = PIPER_DIR / f"{name}.onnx"
+    js = PIPER_DIR / f"{name}.onnx.json"
+    if onnx.exists() and js.exists():
+        return onnx
+    m = re.match(r"^([a-z]{2,3})_([A-Z]{2})-(.+)-(x_low|low|medium|high)$", name)
+    if not m:
+        raise FileNotFoundError(f"Nu găsesc modelul Piper {onnx}")
+    base = (f"https://huggingface.co/rhasspy/piper-voices/resolve/main/"
+            f"{m.group(1)}/{m.group(1)}_{m.group(2)}/{m.group(3)}/{m.group(4)}/{name}")
+    for url, dest in ((base + ".onnx.json", js), (base + ".onnx", onnx)):
+        tmp = dest.with_suffix(dest.suffix + ".part")
+        with urllib.request.urlopen(url, timeout=120) as r, open(tmp, "wb") as f:
+            while True:
+                b = r.read(1 << 20)
+                if not b:
+                    break
+                f.write(b)
+        tmp.replace(dest)
+    return onnx
+
+
 def _edge_val(v, unit):
     """Edge cere „+0%” / „-8Hz”; din Setări poate veni „0”, „5”, „-4 %” etc."""
     s = str(v or "0").replace(" ", "").replace(",", ".")
@@ -721,6 +751,8 @@ class Mouth:
                 return self._synth_gemini(plain)
             if engine == "elevenlabs" and self.cfg["elevenlabs_api_key"]:
                 return self._synth_elevenlabs(plain)
+            if engine == "piper":
+                return self._synth_piper(plain)
         except Exception as e:
             import logging
             logging.getLogger("tars").warning("voce %s: %s (trec pe Edge)", engine, e)
@@ -821,17 +853,25 @@ class Mouth:
             return True
         return False
 
+    def _voice_key(self):
+        e = self.cfg["tts_engine"]
+        if e == "gemini":
+            return f"gemini_{self.cfg['gemini_voice']}"
+        if e == "piper":
+            return f"piper_{self.cfg['piper_voice']}_{self.cfg['piper_speaker']}_{self.cfg['piper_speed']}"
+        return f"{e}_{self.cfg['tts_voice']}"
+
     # ---- confirmări instant („Imediat, domnule.”), sintetizate o dată și ținute pe disc ----
     def filler(self):
         import random
-        key = f'{self.cfg["tts_engine"]}_{self.cfg["gemini_voice"] if self.cfg["tts_engine"] == "gemini" else self.cfg["tts_voice"]}'
+        key = self._voice_key()
         cache = getattr(self, "_fillers", {})
         if cache.get("key") != key:
             return None
         return random.choice(cache["audio"]) if cache.get("audio") else None
 
     def prepare_fillers(self, data_dir):
-        key = f'{self.cfg["tts_engine"]}_{self.cfg["gemini_voice"] if self.cfg["tts_engine"] == "gemini" else self.cfg["tts_voice"]}'
+        key = self._voice_key()
         path = data_dir / f"confirmari_v3_{re.sub(r'[^A-Za-z0-9_-]', '_', key)}.npz"  # v3: regenerate în română
         audio = []
         try:
@@ -908,6 +948,42 @@ class Mouth:
         with urllib.request.urlopen(req, timeout=60) as r:
             pcm = r.read()
         return np.frombuffer(pcm, dtype=np.int16).astype(np.float32) / 32768.0
+
+    # ---- Piper: voce locală (ONNX), pe procesor, fără internet ----
+    def _piper(self):
+        name = (self.cfg["piper_voice"] or "ro_RO-mihai-medium").strip()
+        cur = getattr(self, "_piper_voice", None)
+        if cur and cur[0] == name:
+            return cur[1]
+        with _PIPER_LOCK:
+            cur = getattr(self, "_piper_voice", None)
+            if cur and cur[0] == name:
+                return cur[1]
+            from piper import PiperVoice
+            path = piper_model_path(name)
+            voice = PiperVoice.load(str(path))
+            self._piper_voice = (name, voice)
+            return voice
+
+    def _synth_piper(self, text: str):
+        from piper import SynthesisConfig
+        voice = self._piper()
+        try:
+            speed = float(str(self.cfg["piper_speed"] or 1.1).replace(",", "."))
+        except ValueError:
+            speed = 1.1
+        sid = str(self.cfg["piper_speaker"] or "").strip()
+        conf = SynthesisConfig(speaker_id=int(sid) if sid.isdigit() else None,
+                               length_scale=max(0.6, min(1.6, speed)), noise_scale=0.6, noise_w_scale=0.7)
+        chunks = list(voice.synthesize(text, conf))
+        if not chunks:
+            return np.zeros(0, dtype=np.float32)
+        a = np.concatenate([c.audio_float_array for c in chunks]).astype(np.float32)
+        sr = chunks[0].sample_rate
+        if sr != 24000:  # tot TARS redă la 24 kHz
+            n = int(round(len(a) * 24000 / sr))
+            a = np.interp(np.linspace(0, len(a) - 1, n), np.arange(len(a)), a).astype(np.float32)
+        return a
 
     def _synth_edge(self, text: str):
         import edge_tts

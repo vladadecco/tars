@@ -1,3 +1,5 @@
+Versiunea 2026.10.29.36: voce nouă, locală (Piper): vorbește direct de pe PC, fără internet și fără limite. Prima pornire descarcă vocea (60 MB).
+
 Versiunea 2026.10.29.35: am reparat vocea de rezervă (viteza „0” o bloca), iar testul de accent se aude acum.
 
 Versiunea 2026.10.29.34: în Setări, la Voce, aveți un test de accent cu variantele A, B și C. Alegeți-o pe cea care sună românește.

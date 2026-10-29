@@ -239,10 +239,14 @@
           <select name="whisper_device"><option value="auto">Automat (placa video dacă se poate)</option><option value="cpu">Procesor (CPU)</option><option value="cuda">Placă video NVIDIA (CUDA)</option></select></label>
         <label class="fld">Motor de voce
           <select name="tts_engine">
+            <option value="piper">Piper – local pe PC, fără limite (vocea proprie)</option>
             <option value="edge">Edge – gratuit, mai robotic</option>
             <option value="gemini">Gemini – natural, urmează indicațiile de stil</option>
             <option value="elevenlabs">ElevenLabs – cel mai uman</option>
           </select></label>
+        <label class="fld">Model Piper (local)<input name="piper_voice" placeholder="ro_RO-mihai-medium"></label>
+        <label class="fld">Ritm Piper (1 = normal, 1.2 = mai rar)<input name="piper_speed" placeholder="1.1"></label>
+        <label class="fld">Număr voce în model (gol = prima)<input name="piper_speaker" placeholder=""></label>
         <label class="fld">Ton
           <select name="voice_tone">
             <option value="prietenos și cald">Prietenos și cald</option>
