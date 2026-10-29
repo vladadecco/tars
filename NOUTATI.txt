@@ -1,3 +1,5 @@
+Versiunea 2026.10.29.25: vă înțeleg mai bine. Nu mai pierd începutul comenzii de după „TARS”, ridic volumul când microfonul e încet și vă las puțin mai mult timp să terminați fraza.
+
 Versiunea 2026.10.29.24: când îmi spuneți numele, pregătesc deja legătura cu Claude cât timp vorbiți, deci răspund mai repede.
 
 Versiunea 2026.10.29.22: știu dinainte vremea, taskurile și programul, deci răspund fără căutări în plus, și arăt exact unde se pierde timpul.

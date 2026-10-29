@@ -193,6 +193,7 @@ class Assistant:
             self.mouth = Mouth(self.cfg, self.mic)
             self.ear = Ear(self.cfg, self.mic, on_status=self.store.set_status)
             self.ear.load()
+            self.store.log(f"Recunoaștere vocală: {getattr(self.ear, 'desc', '?')}", "info")
             self.voice_ok = True
             self.beeps = (BEEP_LISTEN, BEEP_DONE)
         except Exception as e:
@@ -234,7 +235,9 @@ class Assistant:
                     self.mic.flush()
                 # la „TARS” păstrăm ce ai spus deja în aceeași suflare
                 self.mouth.play(self.beeps[0])
-            audio = self.ear.record(start_timeout=6.0 if follow == 0 else float(self.cfg["follow_up_seconds"]))
+            pre = self.ear.pre_audio if (follow == 0 and trig == "wake") else None
+            audio = self.ear.record(start_timeout=6.0 if follow == 0 else float(self.cfg["follow_up_seconds"]),
+                                    pre_audio=pre)
             if audio is None:
                 self.idle_status()
                 return

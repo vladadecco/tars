@@ -270,6 +270,9 @@ class Ear:
         """Așteaptă cuvântul de trezire sau butonul / scurtătura de vorbit."""
         if self.wake:
             self.wake.reset()
+        from collections import deque
+        ring = deque(maxlen=25)  # ultimele ~2 secunde
+        self.pre_audio = []
         while not stop.is_set():
             if ptt.is_set():
                 ptt.clear()
@@ -277,20 +280,29 @@ class Ear:
             frame = self.mic.read(0.2)
             if frame is None:
                 continue
+            ring.append(frame)
             rms = float(np.sqrt(np.mean(frame.astype(np.float32) ** 2)))
             self.noise = 0.98 * self.noise + 0.02 * min(rms, 3000)
             if self.wake and self.wake.feed(frame):
                 self.wake.reset()
+                # păstrăm ce ați spus imediat după „TARS” (altfel începutul comenzii se pierdea)
+                self.pre_audio = list(ring)[-18:]
                 return "wake"
         return None
 
     # ---------------------------------------------------------------- înregistrare
-    def record(self, start_timeout=6.0, max_seconds=30.0, silence=0.6, stop: threading.Event | None = None):
+    def record(self, start_timeout=6.0, max_seconds=30.0, silence=0.8, stop: threading.Event | None = None,
+               pre_audio=None):
         """Înregistrează până când utilizatorul tace. Întoarce None dacă nu a vorbit."""
-        threshold = max(self.noise * 2.8, 350.0)
+        threshold = max(self.noise * 2.5, 300.0)
         frames, speaking, started_at = [], False, None
         silent_for, t0 = 0.0, time.time()
         pre = []
+        if pre_audio:
+            frames = list(pre_audio)
+            last = np.concatenate(pre_audio[-4:]).astype(np.float32)
+            if float(np.sqrt(np.mean(last ** 2))) > threshold * 0.7:
+                speaking, started_at = True, time.time()  # vorbiți deja, continuăm direct
         while True:
             if stop is not None and stop.is_set():
                 return None
@@ -317,6 +329,9 @@ class Ear:
         audio = np.concatenate(frames).astype(np.float32) / 32768.0
         if len(audio) < SR * 0.4:
             return None
+        peak = float(np.max(np.abs(audio))) or 1.0
+        if peak < 0.5:  # microfon încet (ex. cel din cameră): aducem vocea la nivel bun
+            audio = audio * min(8.0, 0.8 / peak)
         return audio
 
     def transcribe(self, audio) -> str:
@@ -325,6 +340,8 @@ class Ear:
             audio, language="ro", beam_size=beam, best_of=1, vad_filter=True, without_timestamps=True,
             condition_on_previous_text=False, initial_prompt=ASR_PROMPT, hotwords=ASR_HOTWORDS)
         text = " ".join(s.text.strip() for s in segments).strip()
+        # scoatem numele de la început („TARS, ...”), care vine din înregistrarea de dinainte
+        text = re.sub(r"^\W*((hei|hey|hi|ei)\W+)?(tars-ul|tars|tarz|tares|taras|stars)\b\W*", "", text, flags=re.I).strip()
         # Whisper inventează uneori fraze pe liniște
         if re.fullmatch(r"[\W_]*", text) or re.search(
                 r"subtitr|mulțumesc pentru vizionare|abonați-vă|amara\.org", text, re.I):
