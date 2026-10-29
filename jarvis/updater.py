@@ -126,8 +126,12 @@ class Updater:
                 raise
 
             if (ROOT / "requirements.txt").read_bytes() != old_req:
-                self.store.set_status("gandeste", "instalez pachetele noi")
-                self._pip()
+                self.store.set_status("gandeste", "instalez pachetele noi (poate dura câteva minute)")
+                try:
+                    self._pip()
+                except Exception as e:
+                    log.warning("pip: %s", e)
+                    self.store.log(f"Unele pachete nu s-au instalat: {e}", "error")
             self.ensure_models()
             log.info("actualizat %s -> %s (%d fișiere)", local_version(), new_version, len(written))
             (DATA_DIR / "actualizare.json").write_text(json.dumps({

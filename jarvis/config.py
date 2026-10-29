@@ -37,8 +37,8 @@ DEFAULTS = {
     "wake_word": "tars",          # "tars" (Hey TARS) sau "jarvis" (Hey Jarvis)
     "wake_word_sensitivity": 0.5,
     "push_to_talk_hotkey": "ctrl+alt+t",
-    "whisper_model": "small",
-    "whisper_device": "cpu",
+    "whisper_model": "auto",       # auto = large-v3-turbo pe placa video, small pe procesor
+    "whisper_device": "auto",
     "tts_engine": "edge",          # edge (gratuit) / gemini (natural, cu stil) / elevenlabs (foarte natural)
     "voice_tone": "prietenos și cald",
     "voice_accent": "neutru, din România",
@@ -94,6 +94,12 @@ class Config:
         if self.data.get("model") == "claude-sonnet-5-5" and not self.data.get("_model_ales"):
             self.data["model"] = DEFAULTS["model"]  # o singură dată: trecem pe modelul rapid
             self.data["_model_ales"] = True
+        if not self.data.get("_asr_auto"):
+            if self.data.get("whisper_model") == "small":
+                self.data["whisper_model"] = "auto"
+            if self.data.get("whisper_device") == "cpu":
+                self.data["whisper_device"] = "auto"
+            self.data["_asr_auto"] = True
         if self.data.get("gemini_tts_model") == "gemini-2.5-flash-preview-tts":
             self.data["gemini_tts_model"] = DEFAULTS["gemini_tts_model"]
         if self.data.get("tts_rate") in ("+8%", "+0%"):  # ritm calm, ~130-150 cuvinte/minut

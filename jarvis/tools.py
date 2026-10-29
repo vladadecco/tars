@@ -2,6 +2,8 @@
 import json
 import os
 import subprocess
+import threading
+import time
 import urllib.parse
 import webbrowser
 from datetime import datetime, timedelta
@@ -153,6 +155,16 @@ SCHEMAS = [
         "description": "Pornește în fundal o cercetare amănunțită pe web pe o temă; raportul apare la Cercetare în fereastră. "
                        "Pentru întrebări scurte folosește direct căutarea pe web, nu asta.",
         "input_schema": {"type": "object", "properties": {"tema": {"type": "string"}}, "required": ["tema"]},
+    },
+    {
+        "name": "verifica_actualizari",
+        "description": "Verifică dacă există o versiune nouă a lui TARS și, dacă da, o instalează și repornește.",
+        "input_schema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "repaus",
+        "description": "Încheie conversația curentă: TARS nu mai ascultă continuarea și așteaptă din nou să fie strigat.",
+        "input_schema": {"type": "object", "properties": {}},
     },
     {
         "name": "setare_umor",
@@ -363,6 +375,26 @@ class Tools:
     def t_cercetare(self, tema):
         self.strategist.research(tema)
         return {"ok": True, "pornit": True, "durata": "1-3 minute"}
+
+    def t_verifica_actualizari(self):
+        a = getattr(self, "assistant", None)
+        if not a or not a.updater.configured:
+            return "Actualizările nu sunt configurate."
+        try:
+            new = a.updater.check()
+        except Exception as e:
+            return f"Nu am putut verifica: {e}"
+        if not new:
+            return {"ultima_versiune": True, "versiune": a.updater.remote}
+        threading.Thread(target=lambda: (time.sleep(6), a._do_update()), daemon=True).start()
+        return {"versiune_noua": a.updater.remote, "noutati": a.updater.latest_notes(),
+                "nota": "Spune-i scurt că instalezi versiunea și revii în câteva secunde."}
+
+    def t_repaus(self):
+        a = getattr(self, "assistant", None)
+        if a:
+            a.end_followup = True
+        return {"ok": True}
 
     def t_setare_umor(self, procent):
         v = max(0, min(100, int(procent)))

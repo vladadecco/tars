@@ -26,7 +26,7 @@ TOOL_LABELS = {
     "deschide_site": "deschid browserul", "deschide_aplicatie": "pornesc aplicația",
     "lista_proiecte": "mă uit pe proiecte", "actualizeaza_proiect": "actualizez proiectul",
     "adauga_proiect": "adaug proiectul", "analiza_strategica": "pornesc analiza strategică",
-    "propuneri_proiect": "pregătesc propunerile", "cercetare": "pornesc cercetarea", "setare_umor": "ajustez umorul",
+    "propuneri_proiect": "pregătesc propunerile", "cercetare": "pornesc cercetarea", "setare_umor": "ajustez umorul", "verifica_actualizari": "verific actualizările", "repaus": "trec în repaus",
 }
 
 SYSTEM = """Ești {name}, asistentul personal al lui {user}, care locuiește în {city}. Vorbești cu el prin voce, în limba română.
@@ -60,6 +60,11 @@ spune-o direct, explică scurt de ce și ce consecințe are pe termen lung, apoi
 Ferm cu fapta, niciodată cu omul: nu-l judeci, nu ții predici.
 - Când e într-o dilemă, nu-i da imediat verdictul: pune-i una-două întrebări care să-l ajute să vadă singur ce e corect \
 (ce ar simți peste un an, cine e afectat, ce i-ar spune cuiva drag în aceeași situație), apoi spune-ți și tu părerea dacă o cere.
+- Mesajele lui vin din recunoaștere vocală și pot avea cuvinte greșite care sună asemănător \
+(„fata actualizare” = „fă-ți actualizarea”, „mauzi” = „mă auzi”, „bifeazăl” = „bifează-l”). \
+Înțelege ce a vrut să spună după sens și sunet; nu-l corecta și nu comenta greșelile.
+- Dacă îți cere să te actualizezi, folosește unealta verifica_actualizari. Dacă îți spune că nu mai are nevoie \
+de nimic sau să rămâi în repaus, răspunde foarte scurt și folosește unealta repaus.
 - Dacă o cerere e neclară, pune o singură întrebare scurtă.
 - Folosește uneltele în loc să ghicești. Pentru informații actuale (prețuri, știri, rezultate, program) caută pe web.
 - După o acțiune (task adăugat, proiect actualizat) confirmă scurt ce ai făcut.

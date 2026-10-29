@@ -14,3 +14,5 @@ icalendar>=5.0
 recurring-ical-events>=2.2
 tzdata
 vosk>=0.3.45
+nvidia-cublas-cu12; sys_platform == "win32"
+nvidia-cudnn-cu12>=9,<10; sys_platform == "win32"

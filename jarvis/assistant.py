@@ -1,5 +1,6 @@
 """Dirijorul: leagă vocea, creierul, programul zilnic și fereastra."""
 import logging
+import re
 import queue
 import threading
 import time
@@ -17,6 +18,19 @@ from . import sources
 log = logging.getLogger("jarvis")
 
 
+STOP_RE = re.compile(r"^(nimic|gata|stop|mersi|mulțumesc|mulțam|lasă|las-o|ajunge|pa|repaus|"
+                     r"rămâi în repaus|treci în repaus|du-te în repaus|liniște|taci)\b")
+
+
+def is_stop_phrase(low: str) -> bool:
+    """„Nimic, rămâi în repaus” / „gata, mersi” etc. - scurte și cu sens de oprire."""
+    low = low.replace("ţ", "ț").replace("ş", "ș")
+    words = re.findall(r"\w+", low)
+    if not words or len(words) > 9:
+        return False
+    return bool(STOP_RE.search(low)) or "repaus" in words
+
+
 class Assistant:
     def __init__(self):
         self.cfg = Config()
@@ -25,6 +39,8 @@ class Assistant:
         self.brain = Brain(self.cfg, self.store, self.tools)
         self.strategist = Strategist(self.cfg, self.store, self.brain.client, self.notify)
         self.tools.strategist = self.strategist
+        self.tools.assistant = self
+        self.end_followup = False
         self.updater = Updater(self.cfg, self.store)
         self.update_available = ""
         self.requests = queue.Queue()
@@ -197,12 +213,16 @@ class Assistant:
                 return
             self.store.heard = text
             low = text.lower().strip(" .!?")
-            if low in ("stop", "gata", "mersi", "mulțumesc", "nimic", "lasă", "las-o"):
+            if is_stop_phrase(low):
                 self.mouth.play(self.beeps[1])
                 self.idle_status()
                 return
+            self.end_followup = False
             done = self.ask(text)
             done.wait()
+            if self.end_followup:
+                self.idle_status()
+                return
             follow += 1
             if follow > 6:
                 self.idle_status()

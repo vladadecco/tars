@@ -140,6 +140,31 @@ class Mic:
                 break
 
 
+# Exemple de fraze reale: Whisper scrie mai corect cuvintele pe care le-a „văzut” în context.
+ASR_PROMPT = ("TARS, fă-ți actualizarea. Nimic, rămâi în repaus. Ce s-a întâmplat peste noapte? "
+              "Adaugă un task pentru mâine la ora zece. Bifează-l, l-am făcut. Mă auzi? "
+              "Caută pe internet. Pornește briefing-ul. Proiectul de printuri 3D, site-uri pentru firme, "
+              "PassatGauge, PFA, Bambu Studio, filament PETG.")
+ASR_HOTWORDS = "TARS fă-ți actualizarea repaus rămâi briefing bifează task PassatGauge PFA"
+
+
+def _add_cuda_dlls():
+    """Pe Windows, bibliotecile NVIDIA instalate prin pip trebuie adăugate în calea de căutare."""
+    if os.name != "nt":
+        return
+    import site
+    bases = list(site.getsitepackages()) + [site.getusersitepackages()]
+    for base in bases:
+        for sub in ("nvidia/cublas/bin", "nvidia/cudnn/bin", "nvidia/cuda_runtime/bin", "nvidia/cuda_nvrtc/bin"):
+            d = os.path.join(base, *sub.split("/"))
+            if os.path.isdir(d):
+                try:
+                    os.add_dll_directory(d)
+                except Exception:
+                    pass
+                os.environ["PATH"] = d + os.pathsep + os.environ.get("PATH", "")
+
+
 class VoskWake:
     """„TARS” sau „Hey TARS” - recunoaștere cu vocabular restrâns (model englez mic, rulează local).
     Se declanșează când „tars” (cu sau fără hey) rămâne stabil câteva cadre la rând (anti alarme false)."""
@@ -217,13 +242,28 @@ class Ear:
                 self.on_status("eroare", f"Cuvântul de trezire nu a pornit: {e}")
         self.on_status("pornire", "încarc recunoașterea vocală (prima dată se descarcă, durează)")
         from faster_whisper import WhisperModel
-        device = self.cfg["whisper_device"]
-        try:
-            self.whisper = WhisperModel(self.cfg["whisper_model"], device=device,
-                                        compute_type="int8" if device == "cpu" else "float16",
-                                        cpu_threads=max(2, (os.cpu_count() or 4) - 1))
-        except Exception:
-            self.whisper = WhisperModel(self.cfg["whisper_model"], device="cpu", compute_type="int8")
+        import logging
+        lg = logging.getLogger("tars")
+        model, device = self.cfg["whisper_model"], self.cfg["whisper_device"]
+        self.gpu = False
+        if device in ("auto", "cuda"):
+            _add_cuda_dlls()
+            try:
+                import ctranslate2
+                if ctranslate2.get_cuda_device_count() > 0:
+                    m = "large-v3-turbo" if model in ("auto", "small") else model
+                    w = WhisperModel(m, device="cuda", compute_type="float16")
+                    list(w.transcribe(np.zeros(SR, dtype=np.float32), language="ro")[0])  # probă: merg DLL-urile?
+                    self.whisper, self.gpu, self.desc = w, True, f"{m} pe placa video"
+                    lg.info("recunoaștere: %s", self.desc)
+                    return
+            except Exception as e:
+                lg.warning("placa video nu merge pentru recunoaștere (%s), trec pe procesor", e)
+        m = "small" if model == "auto" else model
+        self.whisper = WhisperModel(m, device="cpu", compute_type="int8",
+                                    cpu_threads=max(2, (os.cpu_count() or 4) - 1))
+        self.desc = f"{m} pe procesor"
+        lg.info("recunoaștere: %s", self.desc)
 
     # ---------------------------------------------------------------- așteptare
     def wait_trigger(self, ptt: threading.Event, stop: threading.Event) -> str | None:
@@ -280,11 +320,10 @@ class Ear:
         return audio
 
     def transcribe(self, audio) -> str:
+        beam = 5 if getattr(self, "gpu", False) else 1
         segments, _ = self.whisper.transcribe(
-            audio, language="ro", beam_size=1, best_of=1, vad_filter=True, without_timestamps=True,
-            condition_on_previous_text=False,
-            initial_prompt="Salut TARS. Ce s-a întâmplat peste noapte? Adaugă un task pentru mâine la ora zece. "
-                           "Proiectul de printuri 3D, site-uri, PassatGauge, PFA.")
+            audio, language="ro", beam_size=beam, best_of=1, vad_filter=True, without_timestamps=True,
+            condition_on_previous_text=False, initial_prompt=ASR_PROMPT, hotwords=ASR_HOTWORDS)
         text = " ".join(s.text.strip() for s in segments).strip()
         # Whisper inventează uneori fraze pe liniște
         if re.fullmatch(r"[\W_]*", text) or re.search(
