@@ -204,10 +204,14 @@ class Api:
             sample = ("Bună ziua, domnule. Mâine va fi înnorat, cu cincisprezece grade, "
                       "iar comanda nouă v-am trimis-o pe WhatsApp.")
             for label, v in (("A", "studio"), ("B", "lang"), ("C", "nota")):
+                a.store.set_status("vorbeste", f"varianta {label}")
                 try:
-                    a.store.set_status("vorbeste", f"varianta {label}")
                     m.play((m._synth_edge(f"Varianta {label}."), 24000))
+                except Exception:
+                    pass
+                try:
                     m.play((m.synth_variant(sample, v), 24000))
+                    a.store.log(f"Varianta {label} redată", "info")
                 except Exception as e:
                     a.store.log(f"Varianta {label}: {e}", "error")
             a.idle_status()

@@ -1,3 +1,5 @@
+Versiunea 2026.10.29.35: am reparat vocea de rezervă (viteza „0” o bloca), iar testul de accent se aude acum.
+
 Versiunea 2026.10.29.34: în Setări, la Voce, aveți un test de accent cu variantele A, B și C. Alegeți-o pe cea care sună românește.
 
 Versiunea 2026.10.29.33: vocea Enceladus sună acum ca în AI Studio, cu accent românesc. Am scos indicațiile care o făceau să sune englezește.

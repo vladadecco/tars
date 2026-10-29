@@ -484,6 +484,15 @@ def decode_mp3(mp3: bytes):
     return np.frombuffer(dec.samples, dtype=np.int16).astype(np.float32) / 32768.0
 
 
+def _edge_val(v, unit):
+    """Edge cere „+0%” / „-8Hz”; din Setări poate veni „0”, „5”, „-4 %” etc."""
+    s = str(v or "0").replace(" ", "").replace(",", ".")
+    m = re.match(r"^([+-]?)(\d+)(?:\.\d+)?", s)
+    if not m:
+        return f"+0{unit}"
+    return f"{m.group(1) or '+'}{m.group(2)}{unit}"
+
+
 def _trim_silence(a, thr=0.012, pad=1200):
     """Taie liniștea de la capete ca bucățile lipite (română + engleză) să curgă natural."""
     idx = np.where(np.abs(a) > thr)[0]
@@ -916,8 +925,8 @@ class Mouth:
 
         async def one(t, en):
             voice = self.cfg["tts_voice_en"] if en else self.cfg["tts_voice"]
-            com = edge_tts.Communicate(t.strip(), voice, rate=self.cfg["tts_rate"],
-                                       pitch=self.cfg["tts_pitch_en"] if en else self.cfg["tts_pitch"])
+            com = edge_tts.Communicate(t.strip(), voice, rate=_edge_val(self.cfg["tts_rate"], "%"),
+                                       pitch=_edge_val(self.cfg["tts_pitch_en"] if en else self.cfg["tts_pitch"], "Hz"))
             buf = io.BytesIO()
             try:
                 async for chunk in com.stream():
