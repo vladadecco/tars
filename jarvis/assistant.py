@@ -115,6 +115,7 @@ class Assistant:
     def _worker(self):
         while True:
             kind, text, speak, briefing, done = self.requests.get()
+            sess = None
             self._busy.set()
             try:
                 if kind == "say":
@@ -163,6 +164,14 @@ class Assistant:
                         self._speak(reply)
             except Exception as e:
                 log.error("eroare: %s\n%s", e, traceback.format_exc())
+                try:  # o sesiune de vorbire începută nu are voie să lase microfonul pe mut
+                    if sess is not None and sess.started:
+                        self.mouth._stop.set()
+                        sess.finish()
+                except Exception:
+                    pass
+                if self.mic:
+                    self.mic.muted = False
                 msg = self._friendly_error(e)
                 self.store.chat("jarvis", msg)
                 self.store.log(msg, "error")
@@ -227,6 +236,7 @@ class Assistant:
         trig = self.ear.wait_trigger(self.ptt, self.stop_event)
         if not trig:
             return
+        self.store.log("👂 M-am trezit" + (" (buton)" if trig == "ptt" else " („TARS”)"), "info")
         self.brain.prewarm()
         if self._busy.is_set() and self.mouth.speaking:
             self.mouth.stop()
@@ -326,6 +336,13 @@ class Assistant:
                     last_cache = time.time()
                     self.refresh_cache()
                 self.store.data["last_seen"] = n.isoformat(timespec="seconds")
+                if self.mic and self.mic.muted and not (self.mouth and self.mouth.speaking):
+                    if time.time() - getattr(self, "_muted_seen", time.time()) > 4:
+                        self.mic.muted = False
+                        log.warning("microfonul rămăsese pe mut - l-am repornit")
+                    self._muted_seen = getattr(self, "_muted_seen", time.time())
+                else:
+                    self._muted_seen = time.time()
             except Exception as e:
                 log.error("program: %s", e)
             self.stop_event.wait(20)
