@@ -1,3 +1,5 @@
+Versiunea 2026.10.29.37: revin la vocea Emil până e gata vocea antrenată.
+
 Versiunea 2026.10.29.36: voce nouă, locală (Piper): vorbește direct de pe PC, fără internet și fără limite. Prima pornire descarcă vocea (60 MB).
 
 Versiunea 2026.10.29.35: am reparat vocea de rezervă (viteza „0” o bloca), iar testul de accent se aude acum.

@@ -41,7 +41,7 @@ DEFAULTS = {
     "asr_cloud_model": "gemini-3.5-transcribe",
     "whisper_model": "auto",       # auto = large-v3-turbo pe placa video, small pe procesor
     "whisper_device": "auto",
-    "tts_engine": "piper",         # piper (local, fără limite) / edge (gratuit) / gemini / elevenlabs
+    "tts_engine": "edge",          # edge (gratuit) / piper (local, vocea antrenată) / gemini / elevenlabs
     "voice_tone": "prietenos și cald",
     "voice_style_prompt": False,
     "voice_variant": "nota",       # studio / lang / nota - vezi testul A/B din Setări   # indicații de stil trimise vocii (pot strica accentul românesc)
@@ -117,8 +117,9 @@ class Config:
             if self.data.get("whisper_device") == "cpu":
                 self.data["whisper_device"] = "auto"
             self.data["_asr_auto"] = True
-        if not self.data.get("_piper"):  # vocea locală devine principala (Gemini avea limită zilnică)
-            self.data["tts_engine"] = "piper"
+        if not self.data.get("_emil_inapoi"):  # Vlad: Emil rămâne vocea până e gata vocea antrenată
+            self.data["tts_engine"] = "edge"
+            self.data["_emil_inapoi"] = True
             self.data["_piper"] = True
         if self.data.get("gemini_tts_model") == "gemini-2.5-flash-preview-tts":
             self.data["gemini_tts_model"] = DEFAULTS["gemini_tts_model"]
