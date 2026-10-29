@@ -383,6 +383,11 @@ function bind() {
       if (!r.error) { $("#setForm").elements.tts_engine.value = "elevenlabs"; $("#setForm").elements.elevenlabs_voice_id.value = r.voice_id; }
     }
   });
+  $("#btnCompareGemini").onclick = async () => {
+    const r = await api.compare_gemini_voices();
+    if (typeof r === "string") { toast(r); return; }
+    $("#compareHint").textContent = "Ascultați: " + r.voices.map((v, i) => `${i + 1} = ${v}`).join(", ") + ". Alegeți apoi din listă și apăsați Salvează.";
+  };
   $("#btnTestVoice").onclick = async () => { const r = await api.test_voice(); toast(typeof r === "string" ? r : "Ascultați…"); };
   $("#btnUpdateNow").onclick = doUpdate;
 

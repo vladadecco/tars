@@ -252,6 +252,8 @@
         <label class="fld">Cheie Gemini <a href="#" data-url="https://aistudio.google.com/apikey">(o iei gratuit de aici)</a>
           <input name="gemini_api_key" type="password" placeholder="AIza…"></label>
         <label class="fld">Voce Gemini
+          <button type="button" class="secondary" id="btnCompareGemini" style="margin:4px 0 8px">🎧 Ascultă 6 variante și alege</button>
+          <div class="hint" id="compareHint"></div>
           <select name="gemini_voice">
             <option value="Charon">Charon – bărbat, calm, informativ</option>
             <option value="Algieba">Algieba – bărbat, catifelat</option>
@@ -261,6 +263,7 @@
             <option value="Sulafat">Sulafat – femeie, caldă</option>
             <option value="Achird">Achird – prietenos</option>
             <option value="Kore">Kore – femeie, fermă</option>
+            <option value="Rasalgethi">Rasalgethi – bărbat, informativ</option>
           </select></label>
         <label class="fld">Cheie ElevenLabs (opțional) <a href="#" data-url="https://elevenlabs.io/app/settings/api-keys">(de aici)</a>
           <input name="elevenlabs_api_key" type="password"></label>
@@ -274,7 +277,8 @@
         <button type="button" class="secondary wide" id="btnTestVoice">🔊 Testează vocea (după Salvează)</button>
         <label class="fld">Voce Edge (rezervă)
           <select name="tts_voice"><option value="ro-RO-EmilNeural">Emil (bărbat)</option><option value="ro-RO-AlinaNeural">Alina (femeie)</option></select></label>
-        <label class="fld">Viteză vorbire<input name="tts_rate" placeholder="+8%"></label>
+        <label class="fld">Viteză vorbire (Edge)<input name="tts_rate" placeholder="-4%"></label>
+        <label class="fld">Înălțime voce (Edge, ex. -8Hz = mai grav)<input name="tts_pitch" placeholder="-8Hz"></label>
         <label class="chk"><input type="checkbox" name="speak_replies"> Răspunde cu voce</label>
       </div>
       <div class="set-group">

@@ -32,13 +32,16 @@ from jarvis.updater import local_version, wait_for_pid  # noqa: E402
 SETTINGS_KEYS = ["anthropic_api_key", "model", "analysis_model", "web_search", "user_name", "city",
                  "gmail_address", "gmail_app_password", "calendar_ics_url", "news_topics",
                  "wake_word_enabled", "wake_word", "wake_word_sensitivity", "push_to_talk_hotkey", "whisper_model",
-                 "whisper_device", "tts_voice", "tts_rate", "speak_replies", "auto_briefing", "briefing_time", "humor", "mic_device", "speaker_device",
+                 "whisper_device", "tts_voice", "tts_rate", "tts_pitch", "speak_replies", "auto_briefing", "briefing_time", "humor", "mic_device", "speaker_device",
                  "tts_engine", "voice_tone", "voice_accent", "gemini_api_key", "gemini_voice",
                  "elevenlabs_api_key", "elevenlabs_voice_id",
                  "always_on_top", "update_repo", "update_branch", "github_token", "auto_update"]
 
 
 SECRET_KEYS = ("anthropic_api_key", "gmail_app_password", "github_token", "gemini_api_key", "elevenlabs_api_key")
+
+
+GEMINI_CANDIDATES = ["Algieba", "Charon", "Gacrux", "Sadaltager", "Iapetus", "Rasalgethi"]
 
 
 class Api:
@@ -187,6 +190,30 @@ class Api:
         s.data["research"] = [r for r in s.data["research"] if r["id"] != rid]
         s.save()
         return True
+
+    def compare_gemini_voices(self):
+        """Spune aceeași frază cu vocile Gemini potrivite pentru TARS, ca să alegeți."""
+        a = self._a
+        if not a.mouth:
+            return "Vocea nu e pornită."
+        if not a.cfg["gemini_api_key"]:
+            return "Puneți întâi cheia Gemini și apăsați Salvează."
+        import threading
+
+        def run():
+            old_engine, old_voice = a.cfg["tts_engine"], a.cfg["gemini_voice"]
+            a.cfg.data["tts_engine"] = "gemini"
+            try:
+                for i, v in enumerate(GEMINI_CANDIDATES, 1):
+                    a.cfg.data["gemini_voice"] = v
+                    a.store.set_status("vorbeste", f"varianta {i}: {v}")
+                    a.mouth.say(f"Varianta {i}. Bună ziua, domnule. Sistemele sunt pregătite, "
+                                f"iar cafeaua, din păcate, rămâne în grija dumneavoastră.")
+            finally:
+                a.cfg.data["tts_engine"], a.cfg.data["gemini_voice"] = old_engine, old_voice
+                a.idle_status()
+        threading.Thread(target=run, daemon=True).start()
+        return {"voices": GEMINI_CANDIDATES}
 
     def test_voice(self):
         a = self._a

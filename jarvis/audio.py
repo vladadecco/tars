@@ -292,8 +292,10 @@ class Ear:
 
 
 VOICE_STYLE = (
-    "Ești vocea unui asistent digital rafinat: bărbat de vreo patruzeci și cinci de ani, bariton cald și catifelat, "
-    "registru mediu spre grav, dicție impecabilă, calm, sigur pe el, cu un umor discret și sec în voce. "
+    "Ești vocea unui majordom digital de clasă: bărbat de vreo patruzeci și cinci de ani, bariton cald, catifelat "
+    "și ușor aerisit, registru mediu spre grav, dicție impecabilă și elegantă. Vorbești calm, fără grabă, "
+    "cu o politețe ușor formală, sigur pe tine, cu o ironie fină și discretă care se simte doar în voce. "
+    "Rostești aproape în surdină, ca la un microfon apropiat, niciodată teatral sau declamat. "
     "Citește textul de mai jos ca un voice-over profesionist, nativ și uman, în limba română, "
     "cu accent {accent}. Livrare fluidă, caldă și naturală; evită complet tonul robotic, plat sau artificial. "
     "Respectă cu strictețe fonetica, topica și muzicalitatea limbii române. "
@@ -430,7 +432,7 @@ class Mouth:
         import miniaudio
 
         async def go():
-            com = edge_tts.Communicate(text, self.cfg["tts_voice"], rate=self.cfg["tts_rate"])
+            com = edge_tts.Communicate(text, self.cfg["tts_voice"], rate=self.cfg["tts_rate"], pitch=self.cfg["tts_pitch"])
             buf = io.BytesIO()
             async for chunk in com.stream():
                 if chunk["type"] == "audio":

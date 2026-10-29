@@ -49,7 +49,8 @@ DEFAULTS = {
     "elevenlabs_voice_id": "JBFqnCBsd6RMkjVDRZzb",
     "elevenlabs_model": "eleven_multilingual_v2",   # sau eleven_v3 (mai expresiv)
     "tts_voice": "ro-RO-EmilNeural",
-    "tts_rate": "+0%",
+    "tts_rate": "-4%",
+    "tts_pitch": "-8Hz",           # vocea standard puțin mai gravă
     "speak_replies": True,
     "follow_up_seconds": 6,
     # Briefing
@@ -92,8 +93,8 @@ class Config:
                 pass
         if self.data.get("gemini_tts_model") == "gemini-2.5-flash-preview-tts":
             self.data["gemini_tts_model"] = DEFAULTS["gemini_tts_model"]
-        if self.data.get("tts_rate") == "+8%":  # ritm mai calm, ~130-150 cuvinte/minut
-            self.data["tts_rate"] = "+0%"
+        if self.data.get("tts_rate") in ("+8%", "+0%"):  # ritm calm, ~130-150 cuvinte/minut
+            self.data["tts_rate"] = DEFAULTS["tts_rate"]
         # Cheia poate veni și din variabila de mediu
         if not self.data.get("anthropic_api_key") and os.environ.get("ANTHROPIC_API_KEY"):
             self.data["anthropic_api_key"] = os.environ["ANTHROPIC_API_KEY"]

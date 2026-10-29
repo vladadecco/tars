@@ -1,3 +1,5 @@
+Versiunea 2026.10.29.6: vocea standard e mai gravă și mai calmă, iar la Gemini puteți asculta șase variante una după alta.
+
 Versiunea 2026.10.29.5: vocea Gemini folosește acum modelul nou, gratuit.
 
 Versiunea 2026.10.29.4: pot primi o voce proprie, originală, de bariton rafinat și calm. Setări, la Voce, apăsați „Creează 3 variante”.
