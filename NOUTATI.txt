@@ -1,3 +1,5 @@
+Versiunea 2026.10.29.28: vocea vorbește mereu românește, chiar și la bucățile scurte de frază. În jurnal apare și de ce nu se folosește placa video.
+
 Versiunea 2026.10.29.27: am reparat vocea care se suprapunea cu confirmarea și tăia din cuvinte.
 
 Versiunea 2026.10.29.26: vorbesc mai legat. Pauzele de la virgulă sunt mai scurte și nu mai sunt goluri între bucățile de frază.

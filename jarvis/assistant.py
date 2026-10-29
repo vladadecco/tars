@@ -194,6 +194,8 @@ class Assistant:
             self.ear = Ear(self.cfg, self.mic, on_status=self.store.set_status)
             self.ear.load()
             self.store.log(f"Recunoaștere vocală: {getattr(self.ear, 'desc', '?')}", "info")
+            if getattr(self.ear, "gpu_error", ""):
+                self.store.log(f"Placa video nu e folosită: {self.ear.gpu_error}", "error")
             self.voice_ok = True
             self.beeps = (BEEP_LISTEN, BEEP_DONE)
         except Exception as e:

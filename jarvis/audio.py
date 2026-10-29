@@ -246,11 +246,15 @@ class Ear:
         lg = logging.getLogger("tars")
         model, device = self.cfg["whisper_model"], self.cfg["whisper_device"]
         self.gpu = False
+        self.gpu_error = ""
         if device in ("auto", "cuda"):
             _add_cuda_dlls()
             try:
                 import ctranslate2
-                if ctranslate2.get_cuda_device_count() > 0:
+                n_gpu = ctranslate2.get_cuda_device_count()
+                if n_gpu == 0:
+                    self.gpu_error = "ctranslate2 nu vede nicio placă NVIDIA (driver vechi sau lipsă CUDA)"
+                if n_gpu > 0:
                     m = "large-v3-turbo" if model in ("auto", "small") else model
                     w = WhisperModel(m, device="cuda", compute_type="float16")
                     list(w.transcribe(np.zeros(SR, dtype=np.float32), language="ro")[0])  # probă: merg DLL-urile?
@@ -259,6 +263,7 @@ class Ear:
                     return
             except Exception as e:
                 lg.warning("placa video nu merge pentru recunoaștere (%s), trec pe procesor", e)
+                self.gpu_error = str(e)[:200]
         m = "small" if model == "auto" else model
         self.whisper = WhisperModel(m, device="cpu", compute_type="int8",
                                     cpu_threads=max(2, (os.cpu_count() or 4) - 1))
@@ -341,7 +346,7 @@ class Ear:
             condition_on_previous_text=False, initial_prompt=ASR_PROMPT, hotwords=ASR_HOTWORDS)
         text = " ".join(s.text.strip() for s in segments).strip()
         # scoatem numele de la început („TARS, ...”), care vine din înregistrarea de dinainte
-        text = re.sub(r"^\W*((hei|hey|hi|ei)\W+)?(tars-ul|tars|tarz|tares|taras|stars)\b\W*", "", text, flags=re.I).strip()
+        text = re.sub(r"^\W*((h[ăaâe]i|hey|hi|ei)\W*)?(tars-ul|tars|tarz|tares|taras|stars|tarse)\b\W*", "", text, flags=re.I).strip()
         # Whisper inventează uneori fraze pe liniște
         if re.fullmatch(r"[\W_]*", text) or re.search(
                 r"subtitr|mulțumesc pentru vizionare|abonați-vă|amara\.org", text, re.I):
@@ -670,10 +675,12 @@ class Mouth:
             f"/v1beta/models/{model}:streamGenerateContent?alt=sse", body,
             {"Content-Type": "application/json", "x-goog-api-key": self.cfg["gemini_api_key"].strip()})
         if r.status != 200:
-            r.read()
+            raw = r.read()
             GEMINI_POOL.release(conn)
             if r.status == 429:
                 self._gemini_pause = time.time() + 900
+            if self._lang_rejected(r.status, raw):
+                return self._synth_stream(text)
             return None
 
         def gen():
@@ -695,13 +702,23 @@ class Mouth:
         return gen()
 
     def _gemini_body(self, text: str) -> dict:
-        return {
+        body = {
             "contents": [{"parts": [{"text": self.style_prompt() + "\n\n## Transcript:\n" + text}]}],
             "generationConfig": {
                 "responseModalities": ["AUDIO"],
-                "speechConfig": {"voiceConfig": {"prebuiltVoiceConfig": {"voiceName": self.cfg["gemini_voice"]}}},
+                "speechConfig": {"languageCode": "ro-RO",  # altfel, la bucăți scurte, „ghicește” engleza
+                                 "voiceConfig": {"prebuiltVoiceConfig": {"voiceName": self.cfg["gemini_voice"]}}},
             },
         }
+        if getattr(self, "_no_lang", False):  # modelul nu acceptă codul de limbă: îl scoatem
+            body["generationConfig"]["speechConfig"].pop("languageCode", None)
+        return body
+
+    def _lang_rejected(self, status, raw: bytes) -> bool:
+        if status == 400 and b"anguage" in raw and not getattr(self, "_no_lang", False):
+            self._no_lang = True
+            return True
+        return False
 
     # ---- confirmări instant („Imediat, domnule.”), sintetizate o dată și ținute pe disc ----
     def filler(self):
@@ -741,6 +758,8 @@ class Mouth:
                 {"Content-Type": "application/json", "x-goog-api-key": self.cfg["gemini_api_key"].strip()})
             raw = r.read()
             GEMINI_POOL.release(conn)
+            if self._lang_rejected(r.status, raw):
+                return self._synth_gemini(text)
             if r.status == 200:
                 part = json.loads(raw)["candidates"][0]["content"]["parts"][0]["inlineData"]
                 return np.frombuffer(base64.b64decode(part["data"]), dtype=np.int16).astype(np.float32) / 32768.0
