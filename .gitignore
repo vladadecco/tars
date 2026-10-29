@@ -1,0 +1,5 @@
+date/
+.venv/
+__pycache__/
+*.pyc
+modele/

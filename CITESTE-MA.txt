@@ -1,0 +1,55 @@
+TARS - asistentul tău personal
+==============================
+
+PORNIRE (o singură dată, ~10 minute)
+1. Dezarhivează folderul unde vrei să stea (ex: Documente\TARS).
+2. Dublu-click pe „Instaleaza TARS.bat”. Așteaptă să termine.
+3. Pornește TARS de pe Desktop. Se deschid Setările.
+4. Pune cheia Claude API:
+   - intri pe https://console.anthropic.com  -> Settings -> API Keys -> Create Key
+   - la Billing pui credit (5-10 $ ajung pentru mult timp la uz zilnic)
+   - lipești cheia în Setări -> Salvează
+Gata. Spune „TARS” (sau „Hey TARS”) ori apasă butonul cu microfon.
+
+OPȚIONAL (le poți face mai târziu)
+- Mail: Setări -> Adresă Gmail + Parolă de aplicație
+  (Google -> Securitate -> Verificare în doi pași -> Parole pentru aplicații).
+  TARS doar citește mailurile, nu le marchează citite și nu trimite nimic.
+- Calendar: Google Calendar pe web -> Setări -> calendarul tău ->
+  „Adresa secretă în format iCal” -> o copiezi în Setări. Tot doar citire.
+
+CE ÎI POȚI SPUNE
+- „TARS, ce s-a întâmplat peste noapte?”
+- „Adaugă un task: sun la contabil mâine la 10.”
+- „Amintește-mi în 20 de minute să scot piesa din imprimantă.”
+- „Am terminat cu mesajele pe WhatsApp, bifează-l.”
+- „Proiectul PassatGauge e la 30 la sută, am comandat modulul CAN.”
+- „Fă o analiză strategică pentru site-uri, cu accent pe primii 10 clienți.”
+- „Caută cât costă filamentul PETG acum.”
+- „Fă o cercetare despre piața de printuri 3D personalizate din România.”
+- „Ține minte că prefer întâlnirile după ora 17.”
+- După ce îți răspunde, poți continua fără să-i mai spui numele câteva secunde.
+- „Gata” sau „mersi” îl pune înapoi pe așteptare.
+- „TARS, setează umorul la 75%.” (ca în Interstellar)
+- Se poate spune legat: „TARS, ce am azi?” - nu trebuie să aștepți bipul.
+- Scurtătura Ctrl+Alt+T îl face să asculte oricând.
+
+FEREASTRA (pe portret)
+- Azi: briefing-ul de dimineață, taskurile, ce urmează, ce s-a făcut.
+- Proiecte: stadiu, progres, pasul următor, analize strategice cu grafice.
+- Cercetare: rapoarte de pe internet, cu surse.
+- Conversație: tot ce v-ați spus.
+Dacă ai un monitor pus vertical, fereastra se mută singură pe el.
+
+COSTURI
+- Recunoașterea vocală și cuvântul „TARS” rulează pe PC, gratis.
+- Vocea lui TARS folosește serviciul Microsoft Edge (gratis, cere internet).
+- Plătești doar Claude API: o conversație obișnuită costă fracțiuni de cent;
+  o analiză strategică completă (cu modelul Opus și căutări pe web) poate ajunge
+  la aprox. 0,5-1,5 $. În Setări poți pune „claude-sonnet-5-5” și la analize, mai ieftin.
+
+DACĂ CEVA NU MERGE
+- Pornește „TARS cu consola (depanare).bat” și uită-te ce scrie.
+- Jurnalul complet e în date\tars.log.
+- Datele tale (taskuri, proiecte, setări) sunt în folderul date\ - nu-l șterge.
+- Dacă nu te aude: Setări Windows -> Confidențialitate -> Microfon -> permite aplicațiilor desktop.

@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TARS</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="bg-glow"></div>
+
+<!-- ================= HEADER ================= -->
+<header class="hud">
+  <div class="hud-top">
+    <div class="brand"><span class="brand-mark">◆</span> <span id="brandName">TARS</span><span class="brand-sub">SISTEM PERSONAL</span></div>
+    <button class="icon-btn" id="btnSettings" title="Setări">
+      <svg viewBox="0 0 24 24"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg>
+    </button>
+  </div>
+
+  <div class="hud-core">
+    <div class="orb-wrap" id="orbWrap" title="Apasă ca să vorbești">
+      <svg class="orb" viewBox="0 0 200 200" id="orb">
+        <defs>
+          <radialGradient id="coreGrad" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="var(--core-1)"/>
+            <stop offset="45%" stop-color="var(--core-2)"/>
+            <stop offset="100%" stop-color="transparent"/>
+          </radialGradient>
+        </defs>
+        <circle cx="100" cy="100" r="96" class="ring r0"/>
+        <g class="spin s1"><circle cx="100" cy="100" r="86" class="ring r1"/></g>
+        <g class="spin s2"><circle cx="100" cy="100" r="74" class="ring r2"/></g>
+        <g class="spin s3"><circle cx="100" cy="100" r="62" class="ring r3"/></g>
+        <g class="ticks" id="ticks"></g>
+        <circle cx="100" cy="100" r="44" fill="url(#coreGrad)" class="core" id="core"/>
+        <circle cx="100" cy="100" r="20" class="core-dot"/>
+      </svg>
+    </div>
+    <div class="hud-info">
+      <div class="clock" id="clock">--:--</div>
+      <div class="date" id="date">—</div>
+      <div class="weather" id="weather">—</div>
+      <div class="status"><span class="status-dot" id="statusDot"></span><span id="statusText">pornesc…</span></div>
+      <div class="heard" id="heard"></div>
+    </div>
+  </div>
+</header>
+
+<!-- ================= VIEWS ================= -->
+<main id="views">
+
+  <!-- AZI -->
+  <section class="view active" id="view-azi">
+    <div class="card brief" id="briefCard">
+      <div class="card-head">
+        <h2><span class="h-ico">◐</span> Peste noapte</h2>
+        <button class="chip-btn" id="btnBrief">Briefing acum</button>
+      </div>
+      <div class="brief-text" id="briefText">Briefing-ul apare aici dimineața. Spune „TARS, ce s-a întâmplat peste noapte?”</div>
+      <div class="brief-meta" id="briefMeta"></div>
+    </div>
+
+    <div class="card update-card hidden" id="updateCard">
+      <div class="card-head"><h2><span class="h-ico">⬆</span> Versiune nouă</h2><button class="chip-btn" id="btnUpdateNow">Actualizează</button></div>
+      <div class="hint" id="updateText"></div>
+    </div>
+
+    <div class="stats" id="stats"></div>
+
+    <div class="card">
+      <div class="card-head"><h2><span class="h-ico">▣</span> Azi</h2><span class="count" id="taskCount"></span></div>
+      <form class="add-row" id="taskForm" autocomplete="off">
+        <input id="taskInput" placeholder="Task nou…">
+        <input id="taskTime" type="time" title="Oră (memento)">
+        <button class="add-btn" title="Adaugă">+</button>
+      </form>
+      <ul class="tasks" id="taskList"></ul>
+      <div class="sub-title hidden" id="overdueTitle">Rămase din urmă</div>
+      <ul class="tasks overdue" id="overdueList"></ul>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2><span class="h-ico">➤</span> Urmează</h2></div>
+      <ul class="timeline" id="upcoming"></ul>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2><span class="h-ico">✓</span> Ce s-a făcut azi</h2></div>
+      <ul class="activity" id="activity"></ul>
+    </div>
+  </section>
+
+  <!-- PROIECTE -->
+  <section class="view" id="view-proiecte">
+    <div class="section-title">
+      <h1>Proiecte</h1>
+      <form class="add-inline" id="projForm" autocomplete="off"><input id="projInput" placeholder="Proiect nou…"><button class="add-btn">+</button></form>
+    </div>
+    <div class="portfolio" id="portfolio"></div>
+    <div class="projects" id="projects"></div>
+  </section>
+
+  <!-- CERCETARE -->
+  <section class="view" id="view-cercetare">
+    <div class="section-title"><h1>Cercetare</h1></div>
+    <form class="search-box" id="researchForm" autocomplete="off">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="researchInput" placeholder="Ce vrei să afli? (ex: piața de printuri 3D personalizate în România)">
+      <button class="go-btn">Caută</button>
+    </form>
+    <div class="hint">Cercetarea rulează în fundal, pe internet, cu surse. Pentru întrebări rapide, întreabă-l direct pe TARS.</div>
+    <div id="researchList"></div>
+  </section>
+
+  <!-- JURNAL / CONVERSAȚIE -->
+  <section class="view" id="view-jurnal">
+    <div class="section-title"><h1>Conversație</h1><button class="chip-btn" id="btnReset">Conversație nouă</button></div>
+    <div class="chat" id="chat"></div>
+  </section>
+</main>
+
+<!-- ================= COMMAND BAR + NAV ================= -->
+<footer>
+  <form class="cmd" id="cmdForm" autocomplete="off">
+    <input id="cmdInput" placeholder="Scrie-i lui TARS…">
+    <button type="button" class="cmd-btn stop hidden" id="btnStop" title="Oprește vorbitul">
+      <svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+    </button>
+    <button type="button" class="cmd-btn mic" id="btnMic" title="Vorbește">
+      <svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+    </button>
+  </form>
+  <nav>
+    <button class="nav-btn active" data-view="azi"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg><span>Azi</span></button>
+    <button class="nav-btn" data-view="proiecte"><svg viewBox="0 0 24 24"><path d="M3 7h7l2 2h9v10H3z"/></svg><span>Proiecte</span></button>
+    <button class="nav-btn" data-view="cercetare"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span>Cercetare</span></button>
+    <button class="nav-btn" data-view="jurnal"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4z"/></svg><span>Conversație</span></button>
+  </nav>
+</footer>
+
+<!-- ================= OVERLAY: PROIECT ================= -->
+<div class="overlay hidden" id="projOverlay">
+  <div class="sheet">
+    <div class="sheet-head">
+      <button class="icon-btn" data-close>←</button>
+      <input class="title-input" id="pdName">
+      <button class="icon-btn danger" id="pdDelete" title="Scoate proiectul">✕</button>
+    </div>
+    <div class="sheet-body">
+      <div class="pd-top">
+        <div class="ring-big" id="pdRing"></div>
+        <div class="pd-ctrl">
+          <label>Stadiu
+            <select id="pdStage">
+              <option>Idee</option><option>Cercetare</option><option>Proiectare</option><option>Acte în pregătire</option>
+              <option>Prototip</option><option>În dezvoltare</option><option>Prospectare</option><option>Test</option>
+              <option>Lansat</option><option>Creștere</option><option>Pe pauză</option><option>Încheiat</option>
+            </select>
+          </label>
+          <label>Progres <span id="pdProgVal"></span>
+            <input type="range" id="pdProgress" min="0" max="100" step="5">
+          </label>
+        </div>
+      </div>
+      <label class="fld">Pasul următor<input id="pdNext"></label>
+      <details class="fld-group">
+        <summary>Detalii proiect (folosite la analiză)</summary>
+        <label class="fld">Domeniu<textarea id="pdDomain" rows="2"></textarea></label>
+        <label class="fld">Obiectiv principal<textarea id="pdObjective" rows="2"></textarea></label>
+        <label class="fld">Public țintă<textarea id="pdAudience" rows="2"></textarea></label>
+        <label class="fld">Resurse / tehnologii<textarea id="pdResources" rows="3"></textarea></label>
+      </details>
+      <form class="add-row" id="noteForm" autocomplete="off"><input id="noteInput" placeholder="Notă: ce s-a mai făcut…"><button class="add-btn">+</button></form>
+      <ul class="notes" id="pdNotes"></ul>
+
+      <div class="analyze-box">
+        <div class="analyze-title">Analiză și propuneri</div>
+        <input id="pdFocus" placeholder="Accent (opțional): ex. cum ajung la primii 50 de clienți">
+        <div class="analyze-btns">
+          <button class="primary" id="pdStrategy">⚡ Analiză strategică completă</button>
+          <button class="secondary" id="pdProposals">Propuneri rapide</button>
+        </div>
+        <div class="hint">Analiza completă caută pe internet concurenți, cifre și tendințe; durează câteva minute.</div>
+      </div>
+      <div id="pdAnalyses"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= OVERLAY: SETĂRI ================= -->
+<div class="overlay hidden" id="setOverlay">
+  <div class="sheet">
+    <div class="sheet-head"><button class="icon-btn" data-close>←</button><div class="sheet-title">Setări</div><span></span></div>
+    <form class="sheet-body settings" id="setForm" autocomplete="off">
+      <div class="set-group">
+        <div class="set-title">Creier (Claude)</div>
+        <label class="fld">Cheie API Claude <a href="#" data-url="https://console.anthropic.com/settings/keys">(de unde o iau)</a>
+          <input name="anthropic_api_key" type="password" placeholder="sk-ant-…"></label>
+        <label class="fld">Model conversație<input name="model"></label>
+        <label class="fld">Model analize/cercetare<input name="analysis_model"></label>
+        <label class="chk"><input type="checkbox" name="web_search"> Căutare pe internet</label>
+      </div>
+      <div class="set-group">
+        <div class="set-title">Despre tine</div>
+        <label class="fld">Numele tău<input name="user_name"></label>
+        <label class="fld">Oraș (pentru vreme)<input name="city"></label>
+        <label class="fld">Subiecte de știri (separate prin virgulă)<input name="news_topics"></label>
+      </div>
+      <div class="set-group">
+        <div class="set-title">Mail Gmail (doar citire)</div>
+        <label class="fld">Adresă Gmail<input name="gmail_address" placeholder="nume@gmail.com"></label>
+        <label class="fld">Parolă de aplicație <a href="#" data-url="https://myaccount.google.com/apppasswords">(o creezi aici)</a>
+          <input name="gmail_app_password" type="password" placeholder="16 litere"></label>
+        <div class="hint">Nu e parola ta de Gmail. Google → Securitate → Verificare în doi pași → Parole pentru aplicații.</div>
+      </div>
+      <div class="set-group">
+        <div class="set-title">Calendar Google (doar citire)</div>
+        <label class="fld">Adresa secretă în format iCal<input name="calendar_ics_url" placeholder="https://calendar.google.com/calendar/ical/…/basic.ics"></label>
+        <div class="hint">Google Calendar pe web → Setări → calendarul tău → „Adresa secretă în format iCal”.</div>
+      </div>
+      <div class="set-group">
+        <div class="set-title">Voce</div>
+        <label class="chk"><input type="checkbox" name="wake_word_enabled"> Ascultă cuvântul de trezire</label>
+        <label class="fld">Cuvânt de trezire
+          <select name="wake_word"><option value="tars">„TARS” (merge și „Hey TARS”)</option><option value="jarvis">„Hey Jarvis”</option></select></label>
+        <label class="fld">Sensibilitate trezire (0.3 = sensibil, 0.7 = strict)<input name="wake_word_sensitivity" type="number" step="0.05" min="0.2" max="0.9"></label>
+        <label class="fld">Scurtătură de vorbit<input name="push_to_talk_hotkey"></label>
+        <label class="fld">Recunoaștere vocală
+          <select name="whisper_model"><option value="small">small – rapid</option><option value="medium">medium – mai precis, mai lent</option><option value="large-v3-turbo">large-v3-turbo – cel mai bun (placă video)</option></select></label>
+        <label class="fld">Procesor
+          <select name="whisper_device"><option value="cpu">Procesor (CPU)</option><option value="cuda">Placă video NVIDIA (CUDA)</option></select></label>
+        <label class="fld">Vocea lui TARS
+          <select name="tts_voice"><option value="ro-RO-EmilNeural">Emil (bărbat)</option><option value="ro-RO-AlinaNeural">Alina (femeie)</option></select></label>
+        <label class="fld">Viteză vorbire<input name="tts_rate" placeholder="+8%"></label>
+        <label class="chk"><input type="checkbox" name="speak_replies"> Răspunde cu voce</label>
+      </div>
+      <div class="set-group">
+        <div class="set-title">Briefing</div>
+        <label class="chk"><input type="checkbox" name="auto_briefing"> Briefing automat dimineața</label>
+        <label class="fld">De la ora<input name="briefing_time" type="time"></label>
+        <label class="chk"><input type="checkbox" name="always_on_top"> Fereastra mereu deasupra</label>
+      </div>
+      <div class="set-group">
+        <div class="set-title">Personalitate</div>
+        <label class="fld">Setare de umor (0–100%)<input name="humor" type="number" min="0" max="100" step="5"></label>
+        <div class="hint">Ca în Interstellar. Onestitatea rămâne la 100%.</div>
+      </div>
+      <div class="set-group">
+        <div class="set-title">Actualizări automate</div>
+        <div class="hint">Versiunea instalată: <b id="setVersion">—</b></div>
+        <label class="fld">Depozit GitHub (utilizator/nume)<input name="update_repo" placeholder="ex: vlad/tars"></label>
+        <label class="fld">Token GitHub (doar dacă depozitul e privat)<input name="github_token" type="password" placeholder="github_pat_…"></label>
+        <label class="chk"><input type="checkbox" name="auto_update"> Se actualizează singur când e liber</label>
+        <button type="button" class="secondary wide" id="btnUpdate">Verifică acum</button>
+      </div>
+      <button class="primary wide">Salvează</button>
+      <div class="hint center" id="setMsg"></div>
+    </form>
+  </div>
+</div>
+
+<div class="toast hidden" id="toast"></div>
+<script src="app.js"></script>
+</body>
+</html>
