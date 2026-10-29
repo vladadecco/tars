@@ -50,6 +50,9 @@ if not os.path.exists('/content/piper1-gpl'):
 !apt-get -qq install -y build-essential cmake ninja-build > /dev/null
 !pip -q install -e '.[train]' transformers scikit-learn soundfile > /dev/null
 !pip -q install cython > /dev/null && ./build_monotonic_align.sh > /dev/null 2>&1 && python3 setup.py -q build_ext --inplace > /dev/null 2>&1
+# espeakbridge (C) nu se compilează din sursă în Colab: îl luăm gata făcut din pachetul oficial
+!rm -rf /content/whl && pip download -q --no-deps piper-tts -d /content/whl && cd /content/whl && unzip -oq piper_tts-*.whl 'piper/espeakbridge*' 'piper/espeak-ng-data/*' -d x && cp -r x/piper/* /content/piper1-gpl/src/piper/
+%cd /content/piper1-gpl
 for f in ('pregateste_date.py', 'amesteca_voce.py', 'antreneaza.py', 'exporta.py'):
     !wget -q -O /content/{{f}} {REPO_RAW}/{{f}}
 print('✅ Unelte instalate')
