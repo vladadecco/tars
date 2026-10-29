@@ -1,3 +1,5 @@
+Versiunea 2026.10.29.38: motor de voce nou, Speechify (română naturală, 500.000 de caractere gratuit pe lună). Se alege din Setări, după ce puneți cheia.
+
 Versiunea 2026.10.29.37: revin la vocea Emil până e gata vocea antrenată.
 
 Versiunea 2026.10.29.36: voce nouă, locală (Piper): vorbește direct de pe PC, fără internet și fără limite. Prima pornire descarcă vocea (60 MB).

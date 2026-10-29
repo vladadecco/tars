@@ -56,6 +56,10 @@ DEFAULTS = {
     "piper_voice": "ro_RO-mihai-medium",   # nume de model; se descarcă singur în modele/piper
     "piper_speed": 1.1,                    # >1 = mai rar, mai calm
     "piper_speaker": "",                   # pentru modelele cu mai multe voci: numărul vocii
+    # Speechify: 500.000 caractere gratuit pe lună, română pe modelul simba-3.5
+    "speechify_api_key": "",
+    "speechify_voice": "alexandru",        # alexandru / mihai / viorica / ioana
+    "speechify_model": "simba-3.5",
     "tts_voice": "ro-RO-EmilNeural",
     "tts_rate": "-4%",
     "tts_pitch": "-8Hz",           # vocea standard puțin mai gravă

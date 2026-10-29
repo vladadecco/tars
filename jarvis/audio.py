@@ -571,6 +571,7 @@ class _Pool:
 
 
 GEMINI_POOL = _Pool("generativelanguage.googleapis.com")
+SPEECHIFY_POOL = _Pool("api.speechify.ai")
 ASR_POOL = _Pool("generativelanguage.googleapis.com", timeout=8)  # transcrierea nu are voie să blocheze
 FILLERS = ["Imediat, domnule.", "Desigur.", "O clipă.", "Da, domnule.", "Bineînțeles."]
 
@@ -753,6 +754,8 @@ class Mouth:
                 return self._synth_elevenlabs(plain)
             if engine == "piper":
                 return self._synth_piper(plain)
+            if engine == "speechify" and self.cfg["speechify_api_key"] and time.time() > getattr(self, "_speechify_pause", 0):
+                return np.concatenate(list(self._speechify_gen(plain)) or [np.zeros(0, dtype=np.float32)])
         except Exception as e:
             import logging
             logging.getLogger("tars").warning("voce %s: %s (trec pe Edge)", engine, e)
@@ -775,7 +778,15 @@ class Mouth:
         return got
 
     def _synth_stream(self, text: str):
-        """Generator de sunet în flux pentru Gemini; None dacă motorul nu e Gemini."""
+        """Generator de sunet în flux pentru Gemini/Speechify; None pentru celelalte motoare."""
+        if (self.cfg["tts_engine"] == "speechify" and self.cfg["speechify_api_key"]
+                and time.time() > getattr(self, "_speechify_pause", 0)):
+            try:
+                return self._speechify_gen(text.replace("⟦", "").replace("⟧", ""))
+            except Exception as e:
+                import logging
+                logging.getLogger("tars").warning("speechify: %s", e)
+                return None
         if not (self.cfg["tts_engine"] == "gemini" and self.cfg["gemini_api_key"]
                 and time.time() > getattr(self, "_gemini_pause", 0)):
             return None
@@ -859,6 +870,8 @@ class Mouth:
             return f"gemini_{self.cfg['gemini_voice']}"
         if e == "piper":
             return f"piper_{self.cfg['piper_voice']}_{self.cfg['piper_speaker']}_{self.cfg['piper_speed']}"
+        if e == "speechify":
+            return f"speechify_{self.cfg['speechify_voice']}"
         return f"{e}_{self.cfg['tts_voice']}"
 
     # ---- confirmări instant („Imediat, domnule.”), sintetizate o dată și ținute pe disc ----
@@ -948,6 +961,65 @@ class Mouth:
         with urllib.request.urlopen(req, timeout=60) as r:
             pcm = r.read()
         return np.frombuffer(pcm, dtype=np.int16).astype(np.float32) / 32768.0
+
+    # ---- Speechify (Simba 3.5): română, în flux, PCM 24 kHz ----
+    def _speechify_voice(self):
+        want = (self.cfg["speechify_voice"] or "alexandru").strip()
+        cache = getattr(self, "_sp_voice", None)
+        if cache and cache[0] == want:
+            return cache[1]
+        import json, urllib.request
+        vid = want
+        try:
+            req = urllib.request.Request("https://api.speechify.ai/v1/voices", headers={
+                "Authorization": "Bearer " + self.cfg["speechify_api_key"].strip()})
+            with urllib.request.urlopen(req, timeout=15) as r:
+                voices = json.loads(r.read())
+            if isinstance(voices, dict):
+                voices = voices.get("voices") or voices.get("data") or []
+            match = [v for v in voices if want.lower() in
+                     {str(v.get("id", "")).lower(), str(v.get("display_name", v.get("name", ""))).lower()}]
+            ro = [v for v in match if "ro-ro" in json.dumps(v).lower() or '"ro"' in json.dumps(v).lower()]
+            if ro or match:
+                vid = (ro or match)[0]["id"]
+        except Exception as e:
+            import logging
+            logging.getLogger("tars").warning("speechify voci: %s", e)
+        self._sp_voice = (want, vid)
+        return vid
+
+    def _speechify_gen(self, text: str):
+        import json
+        body = json.dumps({"input": text, "voice_id": self._speechify_voice(),
+                           "model": self.cfg["speechify_model"] or "simba-3.5",
+                           "language": "ro-RO"}).encode("utf-8")
+        conn, r = SPEECHIFY_POOL.post("/v1/audio/stream", body, {
+            "Content-Type": "application/json", "Accept": "audio/pcm",
+            "Authorization": "Bearer " + self.cfg["speechify_api_key"].strip()})
+        if r.status != 200:
+            raw = r.read()
+            SPEECHIFY_POOL.release(conn)
+            if r.status in (402, 429):
+                self._speechify_pause = time.time() + 900
+            raise RuntimeError(f"Speechify {r.status}: {raw[:200]!r}")
+
+        def gen():
+            ok, rest = True, b""
+            try:
+                while True:
+                    b = r.read(4800)
+                    if not b:
+                        break
+                    b = rest + b
+                    n = len(b) - len(b) % 2
+                    rest = b[n:]
+                    if n:
+                        yield np.frombuffer(b[:n], dtype="<i2").astype(np.float32) / 32768.0
+            except Exception:
+                ok = False
+            finally:
+                SPEECHIFY_POOL.release(conn, ok)
+        return gen()
 
     # ---- Piper: voce locală (ONNX), pe procesor, fără internet ----
     def _piper(self):

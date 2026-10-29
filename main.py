@@ -34,11 +34,11 @@ SETTINGS_KEYS = ["anthropic_api_key", "model", "analysis_model", "web_search", "
                  "wake_word_enabled", "wake_word", "wake_word_sensitivity", "push_to_talk_hotkey", "whisper_model",
                  "whisper_device", "tts_voice", "tts_rate", "tts_pitch", "tts_voice_en", "speak_replies", "auto_briefing", "briefing_time", "humor", "mic_device", "speaker_device", "instant_ack", "asr_engine", "voice_variant",
                  "tts_engine", "voice_tone", "voice_accent", "gemini_api_key", "gemini_voice", "gemini_tts_model",
-                 "elevenlabs_api_key", "elevenlabs_voice_id", "piper_voice", "piper_speed", "piper_speaker",
+                 "elevenlabs_api_key", "elevenlabs_voice_id", "piper_voice", "piper_speed", "piper_speaker", "speechify_api_key", "speechify_voice",
                  "always_on_top", "update_repo", "update_branch", "github_token", "auto_update"]
 
 
-SECRET_KEYS = ("anthropic_api_key", "gmail_app_password", "github_token", "gemini_api_key", "elevenlabs_api_key")
+SECRET_KEYS = ("anthropic_api_key", "gmail_app_password", "github_token", "gemini_api_key", "elevenlabs_api_key", "speechify_api_key")
 
 
 GEMINI_CANDIDATES = ["Enceladus", "Arlo", "Algieba", "Charon", "Gacrux", "Sadaltager", "Iapetus"]
@@ -351,7 +351,7 @@ class Api:
             clean.pop("wake_word_sensitivity", None)
         c.update(clean)
         self._a.store.log("Setări salvate", "info")
-        if self._a.mouth and any(k in clean for k in ("tts_engine", "gemini_voice", "tts_voice", "piper_voice", "piper_speaker", "piper_speed")):
+        if self._a.mouth and any(k in clean for k in ("tts_engine", "gemini_voice", "tts_voice", "piper_voice", "piper_speaker", "piper_speed", "speechify_voice")):
             import threading as _t
             _t.Thread(target=self._a.mouth.prepare_fillers, args=(DATA_DIR,), daemon=True).start()
         if self._window is not None and "always_on_top" in clean:
