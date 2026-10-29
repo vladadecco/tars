@@ -43,6 +43,7 @@ DEFAULTS = {
     "whisper_device": "auto",
     "tts_engine": "edge",          # edge (gratuit) / gemini (natural, cu stil) / elevenlabs (foarte natural)
     "voice_tone": "prietenos și cald",
+    "voice_style_prompt": False,   # indicații de stil trimise vocii (pot strica accentul românesc)
     "voice_accent": "neutru, din România",
     "gemini_api_key": "",
     "gemini_tts_model": "gemini-3.8-flash-tts",   # gratuit pe cheia din AI Studio

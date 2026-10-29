@@ -437,7 +437,7 @@ VOICE_STYLE = (
     "Accentuează cuvintele cheie, exact cum ar face un om într-o discuție reală. "
     "Pune accentul pe silaba corectă în fiecare cuvânt românesc, pronunță clar ă, â, î, ș, ț, "
     "urcă intonația la întrebări și coboar-o firesc la afirmații. "
-    "Cuvintele, numele și expresiile în engleză pronunță-le cu pronunție engleză nativă, apoi revino firesc la română. "
+    "Accent românesc nativ peste tot; doar numele proprii englezești (ex. WhatsApp) le pronunți englezește. "
     "Ton: {ton}, cu variații subtile de volum și înălțime. "
     "Citește doar textul, fără să adaugi sau să schimbi nimic:")
 
@@ -774,7 +774,9 @@ class Mouth:
 
     def _gemini_body(self, text: str) -> dict:
         body = {
-            "contents": [{"parts": [{"text": self.style_prompt() + "\n\n## Transcript:\n" + text}]}],
+            # exact ca în AI Studio (unde vocea a sunat bine): doar textul, fără instrucțiuni lungi
+            "contents": [{"parts": [{"text": (self.style_prompt() + "\n\n" if self.cfg["voice_style_prompt"] else "")
+                                             + "## Transcript:\n" + text}]}],
             "generationConfig": {
                 "responseModalities": ["AUDIO"],
                 "speechConfig": {"languageCode": "ro-RO",  # altfel, la bucăți scurte, „ghicește” engleza
@@ -802,7 +804,7 @@ class Mouth:
 
     def prepare_fillers(self, data_dir):
         key = f'{self.cfg["tts_engine"]}_{self.cfg["gemini_voice"] if self.cfg["tts_engine"] == "gemini" else self.cfg["tts_voice"]}'
-        path = data_dir / f"confirmari_{re.sub(r'[^A-Za-z0-9_-]', '_', key)}.npz"
+        path = data_dir / f"confirmari_v3_{re.sub(r'[^A-Za-z0-9_-]', '_', key)}.npz"  # v3: regenerate în română
         audio = []
         try:
             if path.exists():

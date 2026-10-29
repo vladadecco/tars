@@ -1,3 +1,5 @@
+Versiunea 2026.10.29.33: vocea Enceladus sună acum ca în AI Studio, cu accent românesc. Am scos indicațiile care o făceau să sune englezește.
+
 Versiunea 2026.10.29.32: microfonul nu mai rămâne blocat după o eroare, iar în jurnal apare când mă trezesc.
 
 Versiunea 2026.10.29.31: dacă transcrierea Gemini nu întoarce nimic, folosesc imediat recunoașterea locală, iar în jurnal scriu exact ce am auzit.
