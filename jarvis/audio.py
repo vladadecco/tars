@@ -381,8 +381,7 @@ class Mouth:
         return VOICE_STYLE.format(accent=self.cfg["voice_accent"], ton=self.cfg["voice_tone"])
 
     def _synth_gemini(self, text: str):
-        import base64, json, urllib.request
-        model = self.cfg["gemini_tts_model"]
+        import base64, json, urllib.request, urllib.error
         body = {
             "contents": [{"parts": [{"text": self.style_prompt() + "\n\n" + text}]}],
             "generationConfig": {
@@ -390,12 +389,24 @@ class Mouth:
                 "speechConfig": {"voiceConfig": {"prebuiltVoiceConfig": {"voiceName": self.cfg["gemini_voice"]}}},
             },
         }
-        req = urllib.request.Request(
-            f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
-            data=json.dumps(body).encode("utf-8"),
-            headers={"Content-Type": "application/json", "x-goog-api-key": self.cfg["gemini_api_key"].strip()})
-        with urllib.request.urlopen(req, timeout=60) as r:
-            data = json.loads(r.read())
+        models = [self.cfg["gemini_tts_model"], "gemini-3.8-flash-tts", "gemini-3.8-flash-lite-tts",
+                  "gemini-2.5-flash-preview-tts"]
+        last = None
+        for model in dict.fromkeys(models):  # încearcă pe rând, fără dubluri
+            req = urllib.request.Request(
+                f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
+                data=json.dumps(body).encode("utf-8"),
+                headers={"Content-Type": "application/json", "x-goog-api-key": self.cfg["gemini_api_key"].strip()})
+            try:
+                with urllib.request.urlopen(req, timeout=60) as r:
+                    data = json.loads(r.read())
+                break
+            except urllib.error.HTTPError as e:
+                last = e
+                if e.code not in (400, 404):  # 429 = limită gratuită atinsă; nu insistăm
+                    raise
+        else:
+            raise last
         part = data["candidates"][0]["content"]["parts"][0]["inlineData"]
         pcm = base64.b64decode(part["data"])  # PCM 24 kHz, 16 biți, mono
         return np.frombuffer(pcm, dtype=np.int16).astype(np.float32) / 32768.0

@@ -43,7 +43,7 @@ DEFAULTS = {
     "voice_tone": "prietenos și cald",
     "voice_accent": "neutru, din România",
     "gemini_api_key": "",
-    "gemini_tts_model": "gemini-2.5-flash-preview-tts",
+    "gemini_tts_model": "gemini-3.8-flash-tts",   # gratuit pe cheia din AI Studio
     "gemini_voice": "Algieba",
     "elevenlabs_api_key": "",
     "elevenlabs_voice_id": "JBFqnCBsd6RMkjVDRZzb",
@@ -90,6 +90,8 @@ class Config:
                 self.data.update(saved)
             except Exception:
                 pass
+        if self.data.get("gemini_tts_model") == "gemini-2.5-flash-preview-tts":
+            self.data["gemini_tts_model"] = DEFAULTS["gemini_tts_model"]
         if self.data.get("tts_rate") == "+8%":  # ritm mai calm, ~130-150 cuvinte/minut
             self.data["tts_rate"] = "+0%"
         # Cheia poate veni și din variabila de mediu

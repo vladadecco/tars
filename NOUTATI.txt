@@ -1,3 +1,5 @@
+Versiunea 2026.10.29.5: vocea Gemini folosește acum modelul nou, gratuit.
+
 Versiunea 2026.10.29.4: pot primi o voce proprie, originală, de bariton rafinat și calm. Setări, la Voce, apăsați „Creează 3 variante”.
 
 Versiunea 2026.10.29.3: voce nouă, naturală. În Setări, la Voce, puteți alege Gemini sau ElevenLabs, tonul și accentul, și puteți testa vocea.
