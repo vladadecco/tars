@@ -127,6 +127,7 @@ class Assistant:
                     continue
                 self.store.chat("tu", text)
                 self.store.set_status("gandeste", "mă gândesc")
+                self.brain._warm_at = time.time()
                 if not getattr(self, "_timing", None):  # întrebare scrisă: cronometrăm de acum
                     self._timing = {"end": time.time(), "asr": 0.0}
                 sess = self.mouth.session() if (speak and self.cfg["speak_replies"] and self.mouth) else None
@@ -208,6 +209,7 @@ class Assistant:
             return
         self.idle_status()
         threading.Thread(target=self.mouth.prepare_fillers, args=(DATA_DIR,), daemon=True).start()
+        self.brain.prewarm()
         self._announce_update()
         self._maybe_start_briefing()
         while not self.stop_event.is_set():
@@ -221,6 +223,7 @@ class Assistant:
         trig = self.ear.wait_trigger(self.ptt, self.stop_event)
         if not trig:
             return
+        self.brain.prewarm()
         if self._busy.is_set() and self.mouth.speaking:
             self.mouth.stop()
         follow = 0

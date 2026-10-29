@@ -167,6 +167,21 @@ class Brain:
                     on_text(chunk)
             return stream.get_final_message()
 
+    def prewarm(self):
+        """Cât timp vorbiți, „încălzim” legătura și cache-ul promptului la Claude: răspunsul vine mai repede."""
+        if not self.cfg.ready or time.time() - getattr(self, "_warm_at", 0) < 60:
+            return
+        self._warm_at = time.time()
+
+        def go():
+            try:
+                self.client().messages.create(
+                    model=self.cfg["model"], max_tokens=1, system=self._system(), tools=self._tools(),
+                    messages=[{"role": "user", "content": "."}], thinking={"type": "disabled"})
+            except Exception:
+                pass
+        threading.Thread(target=go, daemon=True).start()
+
     def ask(self, text: str, on_status=None, on_text=None) -> str:
         """Trimite un mesaj și întoarce răspunsul de spus. on_text primește textul pe măsură ce vine."""
         with self._lock:
