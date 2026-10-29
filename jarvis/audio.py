@@ -457,6 +457,7 @@ class SpeechSession:
         self.spoken_any = False
         self.put_any = False
         self.first_audio_at = None
+        self.first_put_at = None
 
     def _start(self):
         if self.started:
@@ -489,6 +490,8 @@ class SpeechSession:
             return
         first = not self.put_any
         self.put_any = True
+        if first:
+            self.first_put_at = time.time()
         self._start()
         self.texts.put(sent)
 

@@ -1,5 +1,6 @@
 """Creierul: conversația cu Claude, cu unelte."""
 import threading
+import time
 
 from .store import now
 from .tools import ZILE
@@ -98,6 +99,7 @@ class Brain:
         self.tools = tools
         self.history = []
         self._client = None
+        self.timing = None
         self._lock = threading.Lock()
 
     def client(self):
@@ -119,6 +121,15 @@ class Brain:
         cut = full.index("Acum este {weekday}")
         static, dynamic = full[:cut], full[cut:].format(
             weekday=ZILE[n.weekday()], date=n.strftime("%d.%m.%Y"), time=n.strftime("%H:%M"))
+        ctx = getattr(self, "context_fn", None)
+        if ctx:
+            try:
+                live = ctx()
+                if live:
+                    dynamic += ("\n\nDate la zi (folosește-le direct, fără unelte, pentru vreme, taskuri și program):\n"
+                                + live)
+            except Exception:
+                pass
         return [{"type": "text", "text": static, "cache_control": {"type": "ephemeral"}},
                 {"type": "text", "text": dynamic}]
 
@@ -190,7 +201,10 @@ class Brain:
                             if b.type == "tool_use":
                                 if on_status:
                                     on_status(TOOL_LABELS.get(b.name, b.name))
+                                t_tool = time.time()
                                 out = self.tools.run(b.name, b.input)
+                                if self.timing is not None:
+                                    self.timing["tools"] = self.timing.get("tools", 0) + time.time() - t_tool
                                 results.append({"type": "tool_result", "tool_use_id": b.id, "content": out[:60000]})
                         self.history.append({"role": "user", "content": results})
                         continue

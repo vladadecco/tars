@@ -40,6 +40,7 @@ class Assistant:
         self.strategist = Strategist(self.cfg, self.store, self.brain.client, self.notify)
         self.tools.strategist = self.strategist
         self.tools.assistant = self
+        self.brain.context_fn = self._live_context
         self.end_followup = False
         self.updater = Updater(self.cfg, self.store)
         self.update_available = ""
@@ -130,12 +131,17 @@ class Assistant:
                     self._timing = {"end": time.time(), "asr": 0.0}
                 sess = self.mouth.session() if (speak and self.cfg["speak_replies"] and self.mouth) else None
 
-                def on_text(chunk, sess=sess):
+                tm0 = self._timing
+                tm0["tools"] = 0.0
+
+                def on_text(chunk, sess=sess, tm0=tm0):
+                    tm0.setdefault("token", time.time())
                     if sess is not None:
                         if not sess.started:
                             self.store.set_status("vorbeste", "")
                         sess.feed(chunk)
 
+                self.brain.timing = tm0
                 reply = self.brain.ask(text, on_status=lambda s: self.store.set_status("gandeste", s), on_text=on_text)
                 self.store.chat("jarvis", reply)
                 if briefing:
@@ -145,8 +151,12 @@ class Assistant:
                     tm = getattr(self, "_timing", None)
                     if tm and sess.first_audio_at:
                         total = sess.first_audio_at - tm["end"]
-                        self.store.log(f"⏱ Răspuns în {total:.1f} s (transcriere {tm['asr']:.1f} s, "
-                                       f"gândire + voce {total - tm['asr']:.1f} s)", "info")
+                        tok = tm.get("token", sess.first_audio_at) - tm["end"] - tm["asr"] - tm["tools"]
+                        put = sess.first_put_at or sess.first_audio_at
+                        voice = sess.first_audio_at - put
+                        log.info("timp: %s", tm)
+                        self.store.log(f"⏱ {total:.1f} s = transcriere {tm['asr']:.1f} + Claude {tok:.1f} "
+                                       f"+ unelte {tm['tools']:.1f} + voce {voice:.1f} s", "info")
                     self._timing = None
                     if not sess.spoken_any:
                         self._speak(reply)
@@ -363,9 +373,32 @@ class Assistant:
     def update_now(self):
         threading.Thread(target=self._check_update, kwargs={"auto": False}, daemon=True).start()
 
+    def _live_context(self) -> str:
+        """Date proaspete puse direct în prompt: răspunde fără să mai cheme unelte (mai rapid)."""
+        parts = []
+        w = self.cache.get("weather_full")
+        if w:
+            now = w["acum"]
+            parts.append(f"Vremea în {self.cfg['city']} acum: {now['temperatura']} grade, {now['cer']}, vânt {now['vant_kmh']} km/h.")
+            for d in w["zile"][1:]:
+                parts.append(f"{d['data']}: între {d['min']} și {d['max']} grade, {d['cer']}, "
+                             f"șanse de precipitații {d['sanse_precipitatii_pct']}%.")
+        tasks = self.store.tasks_for(today_str())
+        if tasks:
+            parts.append("Taskuri azi: " + "; ".join(
+                f"{t['text']}{' la ' + t['time'] if t['time'] else ''}{' (făcut)' if t['done'] else ''}" for t in tasks))
+        od = self.store.overdue()
+        if od:
+            parts.append("Restante: " + "; ".join(t["text"] for t in od))
+        ev = self.cache.get("events") or []
+        if ev:
+            parts.append("Calendar: " + "; ".join(f"{e['data']} {e['ora']} {e['titlu']}" for e in ev[:8]))
+        return "\n".join(parts)
+
     def refresh_cache(self):
         try:
             self.cache["weather"] = sources.weather_short(self.cfg["latitude"], self.cfg["longitude"])
+            self.cache["weather_full"] = sources.weather(self.cfg["latitude"], self.cfg["longitude"], 3)
         except Exception as e:
             log.warning("vreme: %s", e)
         if self.cfg["calendar_ics_url"]:
