@@ -521,7 +521,7 @@ class Mouth:
     def _synth_gemini(self, text: str):
         import base64, json, urllib.request, urllib.error
         body = {
-            "contents": [{"parts": [{"text": self.style_prompt() + "\n\n" + text}]}],
+            "contents": [{"parts": [{"text": self.style_prompt() + "\n\n## Transcript:\n" + text}]}],
             "generationConfig": {
                 "responseModalities": ["AUDIO"],
                 "speechConfig": {"voiceConfig": {"prebuiltVoiceConfig": {"voiceName": self.cfg["gemini_voice"]}}},
