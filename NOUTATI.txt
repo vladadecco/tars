@@ -1,3 +1,5 @@
+Versiunea 2026.10.29.31: dacă transcrierea Gemini nu întoarce nimic, folosesc imediat recunoașterea locală, iar în jurnal scriu exact ce am auzit.
+
 Versiunea 2026.10.29.30: vă înțeleg mult mai bine și mai repede, pentru că transcrierea o face acum Gemini. Placa video e prea veche pentru modelul mare, iar dacă nu e internet, rămâne recunoașterea locală.
 
 Versiunea 2026.10.29.29: folosesc și plăcile video mai vechi pentru recunoaștere, deci vă înțeleg mai bine și mai repede.

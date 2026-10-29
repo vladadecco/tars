@@ -248,6 +248,10 @@ class Assistant:
             self.store.set_status("gandeste", "transcriu")
             text = self.ear.transcribe(audio)
             t_asr = time.time()
+            if getattr(self.ear, "cloud_error", ""):
+                self.store.log(f"Transcriere Gemini: {self.ear.cloud_error}", "error")
+            self.store.log(f"🎙️ Am auzit ({getattr(self.ear, 'last_engine', '?')}, {t_asr - t_end:.1f} s): "
+                           f"„{text or '— nimic —'}”", "info")
             if not text:
                 self.idle_status()
                 return

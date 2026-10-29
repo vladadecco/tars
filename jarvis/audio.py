@@ -362,6 +362,8 @@ class Ear:
             w.setsampwidth(2)
             w.setframerate(SR)
             w.writeframes(pcm)
+        if len(audio) > SR * 30:
+            audio = audio[: SR * 30]
         prompt = ("Transcrie exact ce spune vorbitorul, în limba română, cu diacritice. Scrie doar textul spus, "
                   "fără comentarii. Dacă nu se înțelege nimic, răspunde gol. Context, comenzi frecvente: " + ASR_PROMPT)
         body = json.dumps({
@@ -372,11 +374,11 @@ class Ear:
         }).encode("utf-8")
         last = None
         for model in dict.fromkeys([self.cfg["asr_cloud_model"], "gemini-3.5-transcribe", "gemini-3.5-flash-lite"]):
-            conn, r = GEMINI_POOL.post(f"/v1beta/models/{model}:generateContent", body,
+            conn, r = ASR_POOL.post(f"/v1beta/models/{model}:generateContent", body,
                                        {"Content-Type": "application/json",
                                         "x-goog-api-key": self.cfg["gemini_api_key"].strip()})
             raw = r.read()
-            GEMINI_POOL.release(conn)
+            ASR_POOL.release(conn)
             if r.status == 200:
                 d = json.loads(raw)
                 parts = d.get("candidates", [{}])[0].get("content", {}).get("parts", [])
@@ -390,10 +392,15 @@ class Ear:
         raise RuntimeError(last or "transcriere eșuată")
 
     def transcribe(self, audio) -> str:
+        self.last_engine, self.cloud_error = "local", ""
         if self.use_cloud_asr():
             try:
-                text = self._transcribe_cloud(audio)
-                return self._clean(text)
+                raw = self._transcribe_cloud(audio)
+                text = self._clean(raw)
+                if text:
+                    self.last_engine = "Gemini"
+                    return text
+                self.cloud_error = f"Gemini a întors gol ({raw[:60]!r})"
             except Exception as e:
                 import logging
                 logging.getLogger("tars").warning("transcriere cloud: %s (trec pe local)", e)
@@ -487,10 +494,11 @@ def _trim_silence(a, thr=0.012, pad=1200):
 
 class _Pool:
     """Conexiuni HTTPS refolosite: economisesc ~0,2 s la fiecare frază."""
-    def __init__(self, host):
+    def __init__(self, host, timeout=60):
         import http.client
         self.http = http.client
         self.host = host
+        self.timeout = timeout
         self.idle = []
         self.lock = threading.Lock()
 
@@ -500,7 +508,7 @@ class _Pool:
             with self.lock:
                 c = self.idle.pop() if self.idle else None
             if c is None:
-                c = self.http.HTTPSConnection(self.host, timeout=60)
+                c = self.http.HTTPSConnection(self.host, timeout=self.timeout)
             try:
                 c.request("POST", path, body=body, headers=headers)
                 return c, c.getresponse()
@@ -524,6 +532,7 @@ class _Pool:
 
 
 GEMINI_POOL = _Pool("generativelanguage.googleapis.com")
+ASR_POOL = _Pool("generativelanguage.googleapis.com", timeout=8)  # transcrierea nu are voie să blocheze
 FILLERS = ["Imediat, domnule.", "Desigur.", "O clipă.", "Da, domnule.", "Bineînțeles."]
 
 
