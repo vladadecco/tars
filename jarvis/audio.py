@@ -256,11 +256,18 @@ class Ear:
                     self.gpu_error = "ctranslate2 nu vede nicio placă NVIDIA (driver vechi sau lipsă CUDA)"
                 if n_gpu > 0:
                     m = "large-v3-turbo" if model in ("auto", "small") else model
-                    w = WhisperModel(m, device="cuda", compute_type="float16")
-                    list(w.transcribe(np.zeros(SR, dtype=np.float32), language="ro")[0])  # probă: merg DLL-urile?
-                    self.whisper, self.gpu, self.desc = w, True, f"{m} pe placa video"
-                    lg.info("recunoaștere: %s", self.desc)
-                    return
+                    # plăcile mai vechi (ex. GTX 10xx) nu știu float16 rapid: încercăm pe rând
+                    for ct in ("float16", "int8_float16", "int8", "float32"):
+                        try:
+                            w = WhisperModel(m, device="cuda", compute_type=ct)
+                            list(w.transcribe(np.zeros(SR, dtype=np.float32), language="ro")[0])  # probă
+                        except Exception as e2:
+                            self.gpu_error = str(e2)[:200]
+                            continue
+                        self.whisper, self.gpu, self.desc = w, True, f"{m} pe placa video ({ct})"
+                        self.gpu_error = ""
+                        lg.info("recunoaștere: %s", self.desc)
+                        return
             except Exception as e:
                 lg.warning("placa video nu merge pentru recunoaștere (%s), trec pe procesor", e)
                 self.gpu_error = str(e)[:200]

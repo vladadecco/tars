@@ -1,3 +1,5 @@
+Versiunea 2026.10.29.29: folosesc și plăcile video mai vechi pentru recunoaștere, deci vă înțeleg mai bine și mai repede.
+
 Versiunea 2026.10.29.28: vocea vorbește mereu românește, chiar și la bucățile scurte de frază. În jurnal apare și de ce nu se folosește placa video.
 
 Versiunea 2026.10.29.27: am reparat vocea care se suprapunea cu confirmarea și tăia din cuvinte.
