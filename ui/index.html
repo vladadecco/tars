@@ -265,6 +265,12 @@
         <label class="fld">Cheie ElevenLabs (opțional) <a href="#" data-url="https://elevenlabs.io/app/settings/api-keys">(de aici)</a>
           <input name="elevenlabs_api_key" type="password"></label>
         <label class="fld">ID voce ElevenLabs<input name="elevenlabs_voice_id"></label>
+        <div class="analyze-box" id="voiceDesign">
+          <div class="analyze-title">Vocea proprie a lui TARS (ElevenLabs)</div>
+          <div class="hint">Creez o voce originală: bariton cald, rafinat, calm, cu umor discret, română nativă. Alegeți varianta care vă place.</div>
+          <button type="button" class="primary" id="btnDesign">✨ Creează 3 variante</button>
+          <div id="designList"></div>
+        </div>
         <button type="button" class="secondary wide" id="btnTestVoice">🔊 Testează vocea (după Salvează)</button>
         <label class="fld">Voce Edge (rezervă)
           <select name="tts_voice"><option value="ro-RO-EmilNeural">Emil (bărbat)</option><option value="ro-RO-AlinaNeural">Alina (femeie)</option></select></label>

@@ -1,3 +1,5 @@
+Versiunea 2026.10.29.4: pot primi o voce proprie, originală, de bariton rafinat și calm. Setări, la Voce, apăsați „Creează 3 variante”.
+
 Versiunea 2026.10.29.3: voce nouă, naturală. În Setări, la Voce, puteți alege Gemini sau ElevenLabs, tonul și accentul, și puteți testa vocea.
 
 Versiunea 2026.10.29.2: am reparat căutarea pe internet și pornirea microfonului. În Setări puteți alege acum microfonul și difuzorul.

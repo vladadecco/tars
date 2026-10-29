@@ -292,14 +292,60 @@ class Ear:
 
 
 VOICE_STYLE = (
+    "Ești vocea unui asistent digital rafinat: bărbat de vreo patruzeci și cinci de ani, bariton cald și catifelat, "
+    "registru mediu spre grav, dicție impecabilă, calm, sigur pe el, cu un umor discret și sec în voce. "
     "Citește textul de mai jos ca un voice-over profesionist, nativ și uman, în limba română, "
     "cu accent {accent}. Livrare fluidă, caldă și naturală; evită complet tonul robotic, plat sau artificial. "
     "Respectă cu strictețe fonetica, topica și muzicalitatea limbii române. "
     "Fă pauze scurte la virgulă și pauze de respirație firești la finalul fiecărei fraze. "
     "Ritm conversațional, moderat, aproximativ 130–150 de cuvinte pe minut. "
     "Accentuează cuvintele cheie, exact cum ar face un om într-o discuție reală. "
+    "Pune accentul pe silaba corectă în fiecare cuvânt românesc, pronunță clar ă, â, î, ș, ț, "
+    "urcă intonația la întrebări și coboar-o firesc la afirmații. "
     "Ton: {ton}, cu variații subtile de volum și înălțime. "
     "Citește doar textul, fără să adaugi sau să schimbi nimic:")
+
+
+TARS_VOICE_DESCRIPTION = (
+    "A native Romanian-speaking male voice, around 45 years old: a refined, articulate digital butler. "
+    "Smooth, warm baritone, mid-low pitch, slightly soft and airy, with crisp, precise diction. "
+    "Calm, composed and unhurried, with quiet confidence and an understated dry wit. "
+    "Very natural and human, intimate close-mic studio recording, perfect native Romanian pronunciation and intonation.")
+
+TARS_VOICE_SAMPLE = (
+    "Bună dimineața, domnule. Afară sunt nouă grade și un cer înnorat, deci o geacă subțire ar fi o alegere înțeleaptă. "
+    "Aveți trei mesaje noi, dintre care unul chiar merită atenția dumneavoastră. "
+    "Iar proiectul de printuri 3D a mai făcut un pas înainte. Cu ce începem astăzi?")
+
+
+def design_voices(api_key: str, description: str = TARS_VOICE_DESCRIPTION):
+    """Cere la ElevenLabs câteva variante de voce originală după descriere. Întoarce [(id, mp3_bytes)]."""
+    import base64, json, urllib.request
+    body = {"voice_description": description, "model_id": "eleven_multilingual_ttv_v2",
+            "text": TARS_VOICE_SAMPLE, "guidance_scale": 6}
+    req = urllib.request.Request("https://api.elevenlabs.io/v1/text-to-voice/design",
+                                 data=json.dumps(body).encode("utf-8"),
+                                 headers={"Content-Type": "application/json", "xi-api-key": api_key.strip()})
+    with urllib.request.urlopen(req, timeout=120) as r:
+        data = json.loads(r.read())
+    return [(p["generated_voice_id"], base64.b64decode(p["audio_base_64"])) for p in data.get("previews", [])]
+
+
+def save_designed_voice(api_key: str, generated_voice_id: str, name: str = "TARS") -> str:
+    import json, urllib.request
+    body = {"voice_name": name, "voice_description": TARS_VOICE_DESCRIPTION[:1000],
+            "generated_voice_id": generated_voice_id}
+    req = urllib.request.Request("https://api.elevenlabs.io/v1/text-to-voice",
+                                 data=json.dumps(body).encode("utf-8"),
+                                 headers={"Content-Type": "application/json", "xi-api-key": api_key.strip()})
+    with urllib.request.urlopen(req, timeout=60) as r:
+        return json.loads(r.read())["voice_id"]
+
+
+def decode_mp3(mp3: bytes):
+    import miniaudio
+    dec = miniaudio.decode(mp3, output_format=miniaudio.SampleFormat.SIGNED16, nchannels=1, sample_rate=24000)
+    return np.frombuffer(dec.samples, dtype=np.int16).astype(np.float32) / 32768.0
 
 
 class Mouth:

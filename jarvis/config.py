@@ -44,10 +44,10 @@ DEFAULTS = {
     "voice_accent": "neutru, din România",
     "gemini_api_key": "",
     "gemini_tts_model": "gemini-2.5-flash-preview-tts",
-    "gemini_voice": "Charon",
+    "gemini_voice": "Algieba",
     "elevenlabs_api_key": "",
     "elevenlabs_voice_id": "JBFqnCBsd6RMkjVDRZzb",
-    "elevenlabs_model": "eleven_multilingual_v2",
+    "elevenlabs_model": "eleven_multilingual_v2",   # sau eleven_v3 (mai expresiv)
     "tts_voice": "ro-RO-EmilNeural",
     "tts_rate": "+0%",
     "speak_replies": True,

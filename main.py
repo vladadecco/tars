@@ -198,6 +198,42 @@ class Api:
         threading.Thread(target=a.mouth.say, args=(sample,), daemon=True).start()
         return True
 
+    def design_voice(self):
+        """Creează 3 variante de voce originală pentru TARS (ElevenLabs). Durează ~20 s."""
+        from jarvis import audio as A
+        key = self._a.cfg["elevenlabs_api_key"]
+        if not key:
+            return {"error": "Puneți întâi cheia ElevenLabs și apăsați Salvează."}
+        try:
+            self._previews = A.design_voices(key)
+        except Exception as e:
+            return {"error": f"ElevenLabs a refuzat: {e}"}
+        self._a.store.log(f"Am creat {len(self._previews)} variante de voce", "info")
+        return {"count": len(self._previews)}
+
+    def play_preview(self, i):
+        from jarvis import audio as A
+        import threading
+        pv = getattr(self, "_previews", [])
+        if not (0 <= int(i) < len(pv)) or not self._a.mouth:
+            return False
+        data = A.decode_mp3(pv[int(i)][1])
+        threading.Thread(target=self._a.mouth.play, args=((data, 24000),), daemon=True).start()
+        return True
+
+    def choose_preview(self, i):
+        from jarvis import audio as A
+        pv = getattr(self, "_previews", [])
+        if not (0 <= int(i) < len(pv)):
+            return {"error": "Variantă inexistentă."}
+        try:
+            vid = A.save_designed_voice(self._a.cfg["elevenlabs_api_key"], pv[int(i)][0])
+        except Exception as e:
+            return {"error": f"Nu am putut salva vocea: {e}"}
+        self._a.cfg.update({"elevenlabs_voice_id": vid, "tts_engine": "elevenlabs"})
+        self._a.store.log("Vocea nouă a lui TARS e salvată", "done")
+        return {"ok": True, "voice_id": vid}
+
     def audio_devices(self):
         try:
             from jarvis.audio import list_devices

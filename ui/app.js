@@ -364,6 +364,25 @@ function bind() {
   // actualizări
   const doUpdate = async () => { const r = await api.update_now(); toast(typeof r === "string" ? r : "Verific actualizările…"); };
   $("#btnUpdate").onclick = doUpdate;
+  $("#btnDesign").onclick = async () => {
+    const list = $("#designList");
+    list.innerHTML = `<div class="working"><span class="spinner"></span> Creez variantele (~20 secunde)…</div>`;
+    const r = await api.design_voice();
+    if (r.error) { list.innerHTML = `<div class="hint" style="color:var(--red)">${esc(r.error)}</div>`; return; }
+    list.innerHTML = Array.from({ length: r.count }, (_, i) => `<div class="add-row" style="margin-top:8px">
+      <button type="button" class="secondary" style="flex:1" data-play="${i}">▶ Varianta ${i + 1}</button>
+      <button type="button" class="primary" data-pick="${i}">✓ Aleg</button></div>`).join("");
+  };
+  $("#designList").addEventListener("click", async (e) => {
+    const p = e.target.dataset.play, k = e.target.dataset.pick;
+    if (p !== undefined) api.play_preview(+p);
+    if (k !== undefined) {
+      e.target.textContent = "Salvez…";
+      const r = await api.choose_preview(+k);
+      toast(r.error ? r.error : "Vocea e salvată. TARS vorbește de acum cu ea.");
+      if (!r.error) { $("#setForm").elements.tts_engine.value = "elevenlabs"; $("#setForm").elements.elevenlabs_voice_id.value = r.voice_id; }
+    }
+  });
   $("#btnTestVoice").onclick = async () => { const r = await api.test_voice(); toast(typeof r === "string" ? r : "Ascultați…"); };
   $("#btnUpdateNow").onclick = doUpdate;
 

@@ -45,9 +45,7 @@ Cum scrii (textul tău e citit de o voce sintetică în română):
 - Punctuație strictă, pentru pauze naturale de respirație: virgule unde respiri, punct la final de idee, \
 puncte de suspensie pentru o pauză cu efect… folosite rar.
 - Pentru accent sau o intonație anume, pune cuvântul între ghilimele „așa”.
-- Termenii din engleză scrie-i fonetic, cum se citesc în română: „uățap” (WhatsApp), „feisbuc” (Facebook), \
-„laptop”, „Cloud” (Claude), „dașbord” (dashboard). Siglele cu puncte, ca să fie citite literă cu literă: A.I., P.F.A., \
-O.B.D., E.S.P. treizeci și doi.
+{phonetic}
 - Numerele, orele și sumele scrie-le în litere, cum se spun: „ora zece și jumătate”, „două sute de euro”, „șase grade”.
 - Implicit una până la trei propoziții. Un singur lucru pe rând. La briefing poți vorbi mai mult, dar strâns: \
 cel mai important primul, fiecare subiect într-o propoziție scurtă.
@@ -77,6 +75,14 @@ Proiectele lui {user}: {projects}
 Ce ți-a cerut să ții minte: {notes}"""
 
 
+PHONETIC_EDGE = ("- Termenii din engleză scrie-i fonetic, cum se citesc în română: „uățap” (WhatsApp), „feisbuc” (Facebook), "
+                 "„dașbord” (dashboard). Siglele cu puncte, ca să fie citite literă cu literă: A.I., P.F.A., O.B.D.")
+PHONETIC_NEURAL = ("- Scrie corect, literar, cu ortografia oficială a limbii române (DOOM): numele proprii și termenii "
+                   "străini rămân scriși normal (WhatsApp, Facebook, Claude); vocea îi pronunță singură. "
+                   "Siglele românești scrie-le cu puncte (P.F.A., A.N.A.F.) ca să fie citite literă cu literă. "
+                   "Topică firească românească, fără calcuri din engleză, cu acordurile și articolele corecte.")
+
+
 class Brain:
     def __init__(self, cfg, store, tools):
         self.cfg = cfg
@@ -99,7 +105,8 @@ class Brain:
         projects = "; ".join(f"{p['name']} ({p['stage']}, {p['progress']}%)" for p in self.store.data["projects"])
         return SYSTEM.format(name=self.cfg["assistant_name"], user=self.cfg["user_name"], city=self.cfg["city"],
                              weekday=ZILE[n.weekday()], date=n.strftime("%d.%m.%Y"), time=n.strftime("%H:%M"),
-                             projects=projects, notes=notes, humor=self.cfg["humor"])
+                             projects=projects, notes=notes, humor=self.cfg["humor"],
+                             phonetic=PHONETIC_EDGE if self.cfg["tts_engine"] == "edge" else PHONETIC_NEURAL)
 
     def _tools(self):
         tools = self.tools.schemas()
