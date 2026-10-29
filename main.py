@@ -374,11 +374,20 @@ def main():
         import time
         time.sleep(4)  # lăsăm procesele vechi ale ferestrei (WebView2) să elibereze folderul
     import webview
+    # după o actualizare, golim memoria ferestrei ca să nu arate pagina veche
+    try:
+        mark = DATA_DIR / "ui_version.txt"
+        if not mark.exists() or mark.read_text(encoding="utf-8").strip() != local_version():
+            import shutil
+            shutil.rmtree(DATA_DIR / "webview", ignore_errors=True)
+            mark.write_text(local_version(), encoding="utf-8")
+    except Exception:
+        pass
     a = Assistant()
     api = Api(a)
     geo = window_geometry(webview, a.cfg)
     window = webview.create_window(
-        "TARS", url=(ROOT / "ui" / "index.html").as_uri() + "?v=" + local_version(), js_api=api,
+        "TARS", url=str(ROOT / "ui" / "index.html"), js_api=api,
         min_size=(380, 640), background_color="#03070d", on_top=bool(a.cfg["always_on_top"]),
         text_select=True, **geo)
     api._window = window
