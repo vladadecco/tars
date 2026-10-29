@@ -88,6 +88,7 @@ class Store:
 
     # ---------- conversație ----------
     def chat(self, role: str, text: str):
+        text = text.replace("⟦", "").replace("⟧", "")
         with self._lock:
             self.data["chat"].append({"ts": now().isoformat(timespec="seconds"), "role": role, "text": text})
             self.save()

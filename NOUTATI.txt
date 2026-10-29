@@ -1,3 +1,5 @@
+Versiunea 2026.10.29.12: cuvintele în engleză le pronunț acum englezește.
+
 Versiunea 2026.10.29.11: vă înțeleg mai bine. Folosesc placa video și un model de recunoaștere mult mai bun, recunosc comenzile obișnuite și trec în repaus când îmi spuneți.
 
 Versiunea 2026.10.29.10: am reparat fereastra care arăta „File not found” și răspund mult mai repede.

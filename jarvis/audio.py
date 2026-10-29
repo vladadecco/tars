@@ -345,6 +345,7 @@ VOICE_STYLE = (
     "Accentuează cuvintele cheie, exact cum ar face un om într-o discuție reală. "
     "Pune accentul pe silaba corectă în fiecare cuvânt românesc, pronunță clar ă, â, î, ș, ț, "
     "urcă intonația la întrebări și coboar-o firesc la afirmații. "
+    "Cuvintele, numele și expresiile în engleză pronunță-le cu pronunție engleză nativă, apoi revino firesc la română. "
     "Ton: {ton}, cu variații subtile de volum și înălțime. "
     "Citește doar textul, fără să adaugi sau să schimbi nimic:")
 
@@ -389,6 +390,14 @@ def decode_mp3(mp3: bytes):
     import miniaudio
     dec = miniaudio.decode(mp3, output_format=miniaudio.SampleFormat.SIGNED16, nchannels=1, sample_rate=24000)
     return np.frombuffer(dec.samples, dtype=np.int16).astype(np.float32) / 32768.0
+
+
+def _trim_silence(a, thr=0.012, pad=1200):
+    """Taie liniștea de la capete ca bucățile lipite (română + engleză) să curgă natural."""
+    idx = np.where(np.abs(a) > thr)[0]
+    if len(idx) == 0:
+        return a
+    return a[max(0, idx[0] - pad): idx[-1] + pad]
 
 
 class SpeechSession:
@@ -496,10 +505,11 @@ class Mouth:
     def _synth(self, text: str):
         engine = self.cfg["tts_engine"]
         try:
+            plain = text.replace("⟦", "").replace("⟧", "")
             if engine == "gemini" and self.cfg["gemini_api_key"]:
-                return self._synth_gemini(text)
+                return self._synth_gemini(plain)
             if engine == "elevenlabs" and self.cfg["elevenlabs_api_key"]:
-                return self._synth_elevenlabs(text)
+                return self._synth_elevenlabs(plain)
         except Exception as e:
             import logging
             logging.getLogger("tars").warning("voce %s: %s (trec pe Edge)", engine, e)
@@ -557,17 +567,33 @@ class Mouth:
         import edge_tts
         import miniaudio
 
-        async def go():
-            com = edge_tts.Communicate(text, self.cfg["tts_voice"], rate=self.cfg["tts_rate"], pitch=self.cfg["tts_pitch"])
+        # bucăți: [(text, e_engleza)]; engleza merge cu o voce englezească, restul cu cea românească
+        parts = [(p[1:-1] if p.startswith("⟦") else p, p.startswith("⟦"))
+                 for p in re.split(r"(⟦[^⟧]*⟧)", text) if p.strip(" ,")]
+        if not parts:
+            parts = [(text.replace("⟦", "").replace("⟧", ""), False)]
+
+        async def one(t, en):
+            voice = self.cfg["tts_voice_en"] if en else self.cfg["tts_voice"]
+            com = edge_tts.Communicate(t.strip(), voice, rate=self.cfg["tts_rate"],
+                                       pitch=self.cfg["tts_pitch_en"] if en else self.cfg["tts_pitch"])
             buf = io.BytesIO()
             async for chunk in com.stream():
                 if chunk["type"] == "audio":
                     buf.write(chunk["data"])
             return buf.getvalue()
 
-        mp3 = asyncio.run(go())
-        dec = miniaudio.decode(mp3, output_format=miniaudio.SampleFormat.SIGNED16, nchannels=1, sample_rate=24000)
-        return np.frombuffer(dec.samples, dtype=np.int16).astype(np.float32) / 32768.0
+        async def go():
+            return await asyncio.gather(*(one(t, en) for t, en in parts))
+
+        out = []
+        for mp3 in asyncio.run(go()):
+            if not mp3:
+                continue
+            dec = miniaudio.decode(mp3, output_format=miniaudio.SampleFormat.SIGNED16, nchannels=1, sample_rate=24000)
+            a = np.frombuffer(dec.samples, dtype=np.int16).astype(np.float32) / 32768.0
+            out.append(_trim_silence(a))
+        return np.concatenate(out) if out else np.zeros(0, dtype=np.float32)
 
     @staticmethod
     def _chunks(text: str):

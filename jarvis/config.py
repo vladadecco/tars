@@ -51,6 +51,8 @@ DEFAULTS = {
     "tts_voice": "ro-RO-EmilNeural",
     "tts_rate": "-4%",
     "tts_pitch": "-8Hz",           # vocea standard puțin mai gravă
+    "tts_voice_en": "en-GB-RyanNeural",   # pentru cuvintele în engleză
+    "tts_pitch_en": "-6Hz",
     "speak_replies": True,
     "follow_up_seconds": 6,
     # Briefing

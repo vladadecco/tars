@@ -80,10 +80,11 @@ Proiectele lui {user}: {projects}
 Ce ți-a cerut să ții minte: {notes}"""
 
 
-PHONETIC_EDGE = ("- Termenii din engleză scrie-i fonetic, cum se citesc în română: „uățap” (WhatsApp), „feisbuc” (Facebook), "
-                 "„dașbord” (dashboard). Siglele cu puncte, ca să fie citite literă cu literă: A.I., P.F.A., O.B.D.")
-PHONETIC_NEURAL = ("- Scrie corect, literar, cu ortografia oficială a limbii române (DOOM): numele proprii și termenii "
-                   "străini rămân scriși normal (WhatsApp, Facebook, Claude); vocea îi pronunță singură. "
+ENGLISH_RULE = ("- Cuvintele, numele și expresiile în engleză scrie-le normal, în engleză (niciodată fonetic), și încadrează-le "
+                "între ⟦ și ⟧, ca vocea să le pronunțe englezește: ⟦WhatsApp⟧, ⟦Bambu Studio⟧, ⟦Facebook Marketplace⟧, "
+                "⟦update⟧. Nu marca numele românești sau cuvintele intrate în limbă cu formă românească (site, email, laptop). ")
+PHONETIC_EDGE = ENGLISH_RULE + "Siglele românești cu puncte (P.F.A., A.N.A.F.), ca să fie citite literă cu literă."
+PHONETIC_NEURAL = (ENGLISH_RULE + "Scrie corect, literar, cu ortografia oficială a limbii române (DOOM). "
                    "Siglele românești scrie-le cu puncte (P.F.A., A.N.A.F.) ca să fie citite literă cu literă. "
                    "Topică firească românească, fără calcuri din engleză, cu acordurile și articolele corecte.")
 
@@ -199,4 +200,5 @@ class Brain:
             import re
             reply = re.sub(r"\s+", " ", " ".join(reply_parts)).strip()
             reply = re.sub(r"[*#`_]+", "", reply)  # fără urme de Markdown în voce
+            reply = reply.replace("⟦", "").replace("⟧", "")  # marcajele de engleză sunt doar pentru voce
             return reply or "Gata."
