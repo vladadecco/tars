@@ -51,7 +51,7 @@ DEFAULTS = {
     "tts_voice": "ro-RO-EmilNeural",
     "tts_rate": "-4%",
     "tts_pitch": "-8Hz",           # vocea standard puțin mai gravă
-    "tts_voice_en": "en-GB-RyanNeural",   # pentru cuvintele în engleză
+    "tts_voice_en": "",            # gol = aceeași voce și pentru engleză
     "tts_pitch_en": "-6Hz",
     "speak_replies": True,
     "follow_up_seconds": 6,
@@ -96,6 +96,9 @@ class Config:
         if self.data.get("model") == "claude-sonnet-5-5" and not self.data.get("_model_ales"):
             self.data["model"] = DEFAULTS["model"]  # o singură dată: trecem pe modelul rapid
             self.data["_model_ales"] = True
+        if self.data.get("tts_voice_en") == "en-GB-RyanNeural" and not self.data.get("_o_voce"):
+            self.data["tts_voice_en"] = ""
+            self.data["_o_voce"] = True
         if not self.data.get("_asr_auto"):
             if self.data.get("whisper_model") == "small":
                 self.data["whisper_model"] = "auto"

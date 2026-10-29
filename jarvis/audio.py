@@ -568,8 +568,12 @@ class Mouth:
         import miniaudio
 
         # bucăți: [(text, e_engleza)]; engleza merge cu o voce englezească, restul cu cea românească
-        parts = [(p[1:-1] if p.startswith("⟦") else p, p.startswith("⟦"))
-                 for p in re.split(r"(⟦[^⟧]*⟧)", text) if re.search(r"\w", p)]
+        single = (not self.cfg["tts_voice_en"]) or "Multilingual" in self.cfg["tts_voice"]
+        if single:  # o singură voce pentru tot (cerința: aceeași voce în ambele limbi)
+            parts = [(text.replace("⟦", "").replace("⟧", ""), False)]
+        else:
+            parts = [(p[1:-1] if p.startswith("⟦") else p, p.startswith("⟦"))
+                     for p in re.split(r"(⟦[^⟧]*⟧)", text) if re.search(r"\w", p)]
         if not parts:
             parts = [(text.replace("⟦", "").replace("⟧", ""), False)]
 

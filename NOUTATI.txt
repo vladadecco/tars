@@ -1,3 +1,5 @@
+Versiunea 2026.10.29.14: vorbesc din nou cu o singură voce în ambele limbi. Pentru engleză corectă cu aceeași voce, alegeți Andrew sau Brian multilingv, ori Gemini.
+
 Versiunea 2026.10.29.12: cuvintele în engleză le pronunț acum englezește.
 
 Versiunea 2026.10.29.11: vă înțeleg mai bine. Folosesc placa video și un model de recunoaștere mult mai bun, recunosc comenzile obișnuite și trec în repaus când îmi spuneți.
