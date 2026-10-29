@@ -258,6 +258,8 @@ class Assistant:
             if self.cfg["instant_ack"] and self.cfg["speak_replies"]:
                 f = self.mouth.filler()
                 if f is not None:
+                    # răspunsul așteaptă să se termine confirmarea (altfel se suprapun și sună stricat)
+                    self.mouth.busy_until = time.time() + len(f) / 24000 + 0.1
                     threading.Thread(target=self.mouth.play, args=((f, 24000),), daemon=True).start()
             self._timing = {"end": t_end, "asr": t_asr - t_end}
             done = self.ask(text)

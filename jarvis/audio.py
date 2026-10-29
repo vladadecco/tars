@@ -529,6 +529,9 @@ class SpeechSession:
 
     def _play_loop(self):
         """Redă totul printr-un singur flux audio: fără goluri între bucăți."""
+        wait = getattr(self.m, "busy_until", 0) - time.time()
+        if wait > 0:  # se mai aude confirmarea „Imediat, domnule.”
+            time.sleep(min(wait, 3))
         out = None
         try:
             out = self.m.sd.OutputStream(samplerate=24000, channels=1, dtype="float32")
@@ -547,7 +550,7 @@ class SpeechSession:
                 if self.first_audio_at is None:
                     self.first_audio_at = time.time()
                 if isinstance(a, np.ndarray):
-                    a = _trim_silence(a, pad=900)  # fără liniște lungă la capete (pauza de la virgulă)
+                    a = _trim_silence(a, thr=0.006, pad=2400)  # fără liniște lungă la capete, dar fără să tăiem din cuvinte
                     if out is not None:
                         self._write(out, a)
                     else:
@@ -560,10 +563,10 @@ class SpeechSession:
                         if self.m._stop.is_set():
                             break
                         if not started:  # tăiem liniștea de la începutul fluxului
-                            idx = np.where(np.abs(chunk) > 0.012)[0]
+                            idx = np.where(np.abs(chunk) > 0.006)[0]
                             if len(idx) == 0:
                                 continue
-                            chunk = chunk[max(0, idx[0] - 900):]
+                            chunk = chunk[max(0, idx[0] - 2400):]
                             started = True
                         got = True
                         if out is not None:
