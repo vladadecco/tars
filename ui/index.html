@@ -235,7 +235,38 @@
           <select name="whisper_model"><option value="small">small – rapid</option><option value="medium">medium – mai precis, mai lent</option><option value="large-v3-turbo">large-v3-turbo – cel mai bun (placă video)</option></select></label>
         <label class="fld">Procesor
           <select name="whisper_device"><option value="cpu">Procesor (CPU)</option><option value="cuda">Placă video NVIDIA (CUDA)</option></select></label>
-        <label class="fld">Vocea lui TARS
+        <label class="fld">Motor de voce
+          <select name="tts_engine">
+            <option value="edge">Edge – gratuit, mai robotic</option>
+            <option value="gemini">Gemini – natural, urmează indicațiile de stil</option>
+            <option value="elevenlabs">ElevenLabs – cel mai uman</option>
+          </select></label>
+        <label class="fld">Ton
+          <select name="voice_tone">
+            <option value="prietenos și cald">Prietenos și cald</option>
+            <option value="profesionist și corporate">Profesionist și corporate</option>
+            <option value="entuziast și energic">Entuziast și energic</option>
+            <option value="narativ și misterios">Narativ și misterios</option>
+          </select></label>
+        <label class="fld">Accent<input name="voice_accent" placeholder="neutru, din România"></label>
+        <label class="fld">Cheie Gemini <a href="#" data-url="https://aistudio.google.com/apikey">(o iei gratuit de aici)</a>
+          <input name="gemini_api_key" type="password" placeholder="AIza…"></label>
+        <label class="fld">Voce Gemini
+          <select name="gemini_voice">
+            <option value="Charon">Charon – bărbat, calm, informativ</option>
+            <option value="Algieba">Algieba – bărbat, catifelat</option>
+            <option value="Sadaltager">Sadaltager – bărbat, cunoscător</option>
+            <option value="Gacrux">Gacrux – matur</option>
+            <option value="Iapetus">Iapetus – clar</option>
+            <option value="Sulafat">Sulafat – femeie, caldă</option>
+            <option value="Achird">Achird – prietenos</option>
+            <option value="Kore">Kore – femeie, fermă</option>
+          </select></label>
+        <label class="fld">Cheie ElevenLabs (opțional) <a href="#" data-url="https://elevenlabs.io/app/settings/api-keys">(de aici)</a>
+          <input name="elevenlabs_api_key" type="password"></label>
+        <label class="fld">ID voce ElevenLabs<input name="elevenlabs_voice_id"></label>
+        <button type="button" class="secondary wide" id="btnTestVoice">🔊 Testează vocea (după Salvează)</button>
+        <label class="fld">Voce Edge (rezervă)
           <select name="tts_voice"><option value="ro-RO-EmilNeural">Emil (bărbat)</option><option value="ro-RO-AlinaNeural">Alina (femeie)</option></select></label>
         <label class="fld">Viteză vorbire<input name="tts_rate" placeholder="+8%"></label>
         <label class="chk"><input type="checkbox" name="speak_replies"> Răspunde cu voce</label>

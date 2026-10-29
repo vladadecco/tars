@@ -39,8 +39,17 @@ DEFAULTS = {
     "push_to_talk_hotkey": "ctrl+alt+t",
     "whisper_model": "small",
     "whisper_device": "cpu",
+    "tts_engine": "edge",          # edge (gratuit) / gemini (natural, cu stil) / elevenlabs (foarte natural)
+    "voice_tone": "prietenos și cald",
+    "voice_accent": "neutru, din România",
+    "gemini_api_key": "",
+    "gemini_tts_model": "gemini-2.5-flash-preview-tts",
+    "gemini_voice": "Charon",
+    "elevenlabs_api_key": "",
+    "elevenlabs_voice_id": "JBFqnCBsd6RMkjVDRZzb",
+    "elevenlabs_model": "eleven_multilingual_v2",
     "tts_voice": "ro-RO-EmilNeural",
-    "tts_rate": "+8%",
+    "tts_rate": "+0%",
     "speak_replies": True,
     "follow_up_seconds": 6,
     # Briefing
@@ -81,6 +90,8 @@ class Config:
                 self.data.update(saved)
             except Exception:
                 pass
+        if self.data.get("tts_rate") == "+8%":  # ritm mai calm, ~130-150 cuvinte/minut
+            self.data["tts_rate"] = "+0%"
         # Cheia poate veni și din variabila de mediu
         if not self.data.get("anthropic_api_key") and os.environ.get("ANTHROPIC_API_KEY"):
             self.data["anthropic_api_key"] = os.environ["ANTHROPIC_API_KEY"]

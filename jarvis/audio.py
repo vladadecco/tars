@@ -291,6 +291,17 @@ class Ear:
         return text
 
 
+VOICE_STYLE = (
+    "Citește textul de mai jos ca un voice-over profesionist, nativ și uman, în limba română, "
+    "cu accent {accent}. Livrare fluidă, caldă și naturală; evită complet tonul robotic, plat sau artificial. "
+    "Respectă cu strictețe fonetica, topica și muzicalitatea limbii române. "
+    "Fă pauze scurte la virgulă și pauze de respirație firești la finalul fiecărei fraze. "
+    "Ritm conversațional, moderat, aproximativ 130–150 de cuvinte pe minut. "
+    "Accentuează cuvintele cheie, exact cum ar face un om într-o discuție reală. "
+    "Ton: {ton}, cu variații subtile de volum și înălțime. "
+    "Citește doar textul, fără să adaugi sau să schimbi nimic:")
+
+
 class Mouth:
     def __init__(self, cfg, mic: Mic | None = None):
         import sounddevice as sd
@@ -309,6 +320,55 @@ class Mouth:
             pass
 
     def _synth(self, text: str):
+        engine = self.cfg["tts_engine"]
+        try:
+            if engine == "gemini" and self.cfg["gemini_api_key"]:
+                return self._synth_gemini(text)
+            if engine == "elevenlabs" and self.cfg["elevenlabs_api_key"]:
+                return self._synth_elevenlabs(text)
+        except Exception as e:
+            import logging
+            logging.getLogger("tars").warning("voce %s: %s (trec pe Edge)", engine, e)
+        return self._synth_edge(text)
+
+    def style_prompt(self) -> str:
+        return VOICE_STYLE.format(accent=self.cfg["voice_accent"], ton=self.cfg["voice_tone"])
+
+    def _synth_gemini(self, text: str):
+        import base64, json, urllib.request
+        model = self.cfg["gemini_tts_model"]
+        body = {
+            "contents": [{"parts": [{"text": self.style_prompt() + "\n\n" + text}]}],
+            "generationConfig": {
+                "responseModalities": ["AUDIO"],
+                "speechConfig": {"voiceConfig": {"prebuiltVoiceConfig": {"voiceName": self.cfg["gemini_voice"]}}},
+            },
+        }
+        req = urllib.request.Request(
+            f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
+            data=json.dumps(body).encode("utf-8"),
+            headers={"Content-Type": "application/json", "x-goog-api-key": self.cfg["gemini_api_key"].strip()})
+        with urllib.request.urlopen(req, timeout=60) as r:
+            data = json.loads(r.read())
+        part = data["candidates"][0]["content"]["parts"][0]["inlineData"]
+        pcm = base64.b64decode(part["data"])  # PCM 24 kHz, 16 biți, mono
+        return np.frombuffer(pcm, dtype=np.int16).astype(np.float32) / 32768.0
+
+    def _synth_elevenlabs(self, text: str):
+        import json, urllib.request
+        vid = self.cfg["elevenlabs_voice_id"].strip()
+        body = {"text": text, "model_id": self.cfg["elevenlabs_model"], "language_code": "ro",
+                "voice_settings": {"stability": 0.45, "similarity_boost": 0.8, "style": 0.35,
+                                   "use_speaker_boost": True}}
+        req = urllib.request.Request(
+            f"https://api.elevenlabs.io/v1/text-to-speech/{vid}?output_format=pcm_24000",
+            data=json.dumps(body).encode("utf-8"),
+            headers={"Content-Type": "application/json", "xi-api-key": self.cfg["elevenlabs_api_key"].strip()})
+        with urllib.request.urlopen(req, timeout=60) as r:
+            pcm = r.read()
+        return np.frombuffer(pcm, dtype=np.int16).astype(np.float32) / 32768.0
+
+    def _synth_edge(self, text: str):
         import edge_tts
         import miniaudio
 

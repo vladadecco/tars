@@ -364,6 +364,7 @@ function bind() {
   // actualizări
   const doUpdate = async () => { const r = await api.update_now(); toast(typeof r === "string" ? r : "Verific actualizările…"); };
   $("#btnUpdate").onclick = doUpdate;
+  $("#btnTestVoice").onclick = async () => { const r = await api.test_voice(); toast(typeof r === "string" ? r : "Ascultați…"); };
   $("#btnUpdateNow").onclick = doUpdate;
 
   // setări

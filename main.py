@@ -33,7 +33,12 @@ SETTINGS_KEYS = ["anthropic_api_key", "model", "analysis_model", "web_search", "
                  "gmail_address", "gmail_app_password", "calendar_ics_url", "news_topics",
                  "wake_word_enabled", "wake_word", "wake_word_sensitivity", "push_to_talk_hotkey", "whisper_model",
                  "whisper_device", "tts_voice", "tts_rate", "speak_replies", "auto_briefing", "briefing_time", "humor", "mic_device", "speaker_device",
+                 "tts_engine", "voice_tone", "voice_accent", "gemini_api_key", "gemini_voice",
+                 "elevenlabs_api_key", "elevenlabs_voice_id",
                  "always_on_top", "update_repo", "update_branch", "github_token", "auto_update"]
+
+
+SECRET_KEYS = ("anthropic_api_key", "gmail_app_password", "github_token", "gemini_api_key", "elevenlabs_api_key")
 
 
 class Api:
@@ -183,6 +188,16 @@ class Api:
         s.save()
         return True
 
+    def test_voice(self):
+        a = self._a
+        if not a.mouth:
+            return "Vocea nu e pornită."
+        import threading
+        sample = ("Bună ziua, domnule. Aceasta este noua mea voce. "
+                  "Spuneți-mi, vă rog, dacă sună mai natural… sau mai ajustăm puțin tonul.")
+        threading.Thread(target=a.mouth.say, args=(sample,), daemon=True).start()
+        return True
+
     def audio_devices(self):
         try:
             from jarvis.audio import list_devices
@@ -206,7 +221,7 @@ class Api:
         c = self._a.cfg
         out = {k: c[k] for k in SETTINGS_KEYS}
         # nu trimitem secretele înapoi în pagină; doar dacă există
-        for k in ("anthropic_api_key", "gmail_app_password", "github_token"):
+        for k in SECRET_KEYS:
             out[k] = "••••••••" if c[k] else ""
         out["version"] = local_version()
         return out
@@ -219,7 +234,7 @@ class Api:
             if k not in values:
                 continue
             v = values[k]
-            if k in ("anthropic_api_key", "gmail_app_password", "github_token") and (v == "••••••••"):
+            if k in SECRET_KEYS and (v == "••••••••"):
                 continue
             clean[k] = v.strip() if isinstance(v, str) else v
         if clean.get("update_repo"):
