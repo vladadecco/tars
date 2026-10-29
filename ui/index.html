@@ -231,6 +231,8 @@
           <select name="wake_word"><option value="tars">„TARS” (merge și „Hey TARS”)</option><option value="jarvis">„Hey Jarvis”</option></select></label>
         <label class="fld">Sensibilitate trezire (0.3 = sensibil, 0.7 = strict)<input name="wake_word_sensitivity" type="number" step="0.05" min="0.2" max="0.9"></label>
         <label class="fld">Scurtătură de vorbit<input name="push_to_talk_hotkey"></label>
+        <label class="fld">Cine transcrie ce spui
+          <select name="asr_engine"><option value="auto">Automat (Gemini dacă placa video nu poate)</option><option value="gemini">Gemini – cel mai precis (internet)</option><option value="local">Local pe PC (fără internet)</option></select></label>
         <label class="fld">Recunoaștere vocală
           <select name="whisper_model"><option value="auto">Automat (cel mai bun pentru PC-ul tău)</option><option value="small">small – rapid</option><option value="medium">medium – mai precis, mai lent</option><option value="large-v3-turbo">large-v3-turbo – cel mai bun (placă video)</option></select></label>
         <label class="fld">Procesor

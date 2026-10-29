@@ -193,7 +193,8 @@ class Assistant:
             self.mouth = Mouth(self.cfg, self.mic)
             self.ear = Ear(self.cfg, self.mic, on_status=self.store.set_status)
             self.ear.load()
-            self.store.log(f"Recunoaștere vocală: {getattr(self.ear, 'desc', '?')}", "info")
+            self.store.log(f"Recunoaștere vocală: {'Gemini (cloud), cu rezervă ' if self.ear.use_cloud_asr() else ''}"
+                           f"{getattr(self.ear, 'desc', '?')}", "info")
             if getattr(self.ear, "gpu_error", ""):
                 self.store.log(f"Placa video nu e folosită: {self.ear.gpu_error}", "error")
             self.voice_ok = True

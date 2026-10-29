@@ -346,12 +346,67 @@ class Ear:
             audio = audio * min(8.0, 0.8 / peak)
         return audio
 
+    def use_cloud_asr(self) -> bool:
+        eng = self.cfg["asr_engine"]
+        if not self.cfg["gemini_api_key"] or time.time() < getattr(self, "_cloud_pause", 0):
+            return False
+        return eng == "gemini" or (eng == "auto" and not getattr(self, "gpu", False))
+
+    def _transcribe_cloud(self, audio) -> str:
+        """Transcriere prin Gemini: mult mai precisă în română decât modelul mic de pe procesor."""
+        import base64, io as _io, json, wave
+        pcm = (np.clip(audio, -1, 1) * 32767).astype(np.int16).tobytes()
+        buf = _io.BytesIO()
+        with wave.open(buf, "wb") as w:
+            w.setnchannels(1)
+            w.setsampwidth(2)
+            w.setframerate(SR)
+            w.writeframes(pcm)
+        prompt = ("Transcrie exact ce spune vorbitorul, în limba română, cu diacritice. Scrie doar textul spus, "
+                  "fără comentarii. Dacă nu se înțelege nimic, răspunde gol. Context, comenzi frecvente: " + ASR_PROMPT)
+        body = json.dumps({
+            "contents": [{"parts": [{"inlineData": {"mimeType": "audio/wav",
+                                                    "data": base64.b64encode(buf.getvalue()).decode()}},
+                                    {"text": prompt}]}],
+            "generationConfig": {"temperature": 0},
+        }).encode("utf-8")
+        last = None
+        for model in dict.fromkeys([self.cfg["asr_cloud_model"], "gemini-3.5-transcribe", "gemini-3.5-flash-lite"]):
+            conn, r = GEMINI_POOL.post(f"/v1beta/models/{model}:generateContent", body,
+                                       {"Content-Type": "application/json",
+                                        "x-goog-api-key": self.cfg["gemini_api_key"].strip()})
+            raw = r.read()
+            GEMINI_POOL.release(conn)
+            if r.status == 200:
+                d = json.loads(raw)
+                parts = d.get("candidates", [{}])[0].get("content", {}).get("parts", [])
+                return " ".join(p.get("text", "") for p in parts).strip()
+            last = f"{model}: {r.status} {raw[:150]!r}"
+            if r.status == 429:
+                self._cloud_pause = time.time() + 600
+                break
+            if r.status not in (400, 404):
+                break
+        raise RuntimeError(last or "transcriere eșuată")
+
     def transcribe(self, audio) -> str:
+        if self.use_cloud_asr():
+            try:
+                text = self._transcribe_cloud(audio)
+                return self._clean(text)
+            except Exception as e:
+                import logging
+                logging.getLogger("tars").warning("transcriere cloud: %s (trec pe local)", e)
+                self.cloud_error = str(e)[:200]
         beam = 1  # viteză: diferența de calitate e mică, cu vocabularul de comenzi
         segments, _ = self.whisper.transcribe(
             audio, language="ro", beam_size=beam, best_of=1, vad_filter=True, without_timestamps=True,
             condition_on_previous_text=False, initial_prompt=ASR_PROMPT, hotwords=ASR_HOTWORDS)
-        text = " ".join(s.text.strip() for s in segments).strip()
+        return self._clean(" ".join(s.text.strip() for s in segments).strip())
+
+    @staticmethod
+    def _clean(text: str) -> str:
+        text = (text or "").strip().strip('"„”')
         # scoatem numele de la început („TARS, ...”), care vine din înregistrarea de dinainte
         text = re.sub(r"^\W*((h[ăaâe]i|hey|hi|ei)\W*)?(tars-ul|tars|tarz|tares|taras|stars|tarse)\b\W*", "", text, flags=re.I).strip()
         # Whisper inventează uneori fraze pe liniște

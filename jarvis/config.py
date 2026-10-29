@@ -37,6 +37,8 @@ DEFAULTS = {
     "wake_word": "tars",          # "tars" (Hey TARS) sau "jarvis" (Hey Jarvis)
     "wake_word_sensitivity": 0.5,
     "push_to_talk_hotkey": "ctrl+alt+t",
+    "asr_engine": "auto",          # auto = Gemini dacă placa video nu poate; gemini; local
+    "asr_cloud_model": "gemini-3.5-transcribe",
     "whisper_model": "auto",       # auto = large-v3-turbo pe placa video, small pe procesor
     "whisper_device": "auto",
     "tts_engine": "edge",          # edge (gratuit) / gemini (natural, cu stil) / elevenlabs (foarte natural)

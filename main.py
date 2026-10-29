@@ -32,7 +32,7 @@ from jarvis.updater import local_version, wait_for_pid  # noqa: E402
 SETTINGS_KEYS = ["anthropic_api_key", "model", "analysis_model", "web_search", "user_name", "city",
                  "gmail_address", "gmail_app_password", "calendar_ics_url", "news_topics",
                  "wake_word_enabled", "wake_word", "wake_word_sensitivity", "push_to_talk_hotkey", "whisper_model",
-                 "whisper_device", "tts_voice", "tts_rate", "tts_pitch", "tts_voice_en", "speak_replies", "auto_briefing", "briefing_time", "humor", "mic_device", "speaker_device", "instant_ack",
+                 "whisper_device", "tts_voice", "tts_rate", "tts_pitch", "tts_voice_en", "speak_replies", "auto_briefing", "briefing_time", "humor", "mic_device", "speaker_device", "instant_ack", "asr_engine",
                  "tts_engine", "voice_tone", "voice_accent", "gemini_api_key", "gemini_voice", "gemini_tts_model",
                  "elevenlabs_api_key", "elevenlabs_voice_id",
                  "always_on_top", "update_repo", "update_branch", "github_token", "auto_update"]
