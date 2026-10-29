@@ -46,7 +46,7 @@ DEFAULTS = {
     "briefing_time": "07:00",
     "night_start_hour": 21,
     # Actualizări automate din GitHub
-    "update_repo": "",            # ex: "vlad/tars"
+    "update_repo": "vladadecco/tars",
     "update_branch": "main",
     "github_token": "",           # doar pentru depozit privat (token cu drept de citire)
     "auto_update": True,
