@@ -32,7 +32,7 @@ from jarvis.updater import local_version, wait_for_pid  # noqa: E402
 SETTINGS_KEYS = ["anthropic_api_key", "model", "analysis_model", "web_search", "user_name", "city",
                  "gmail_address", "gmail_app_password", "calendar_ics_url", "news_topics",
                  "wake_word_enabled", "wake_word", "wake_word_sensitivity", "push_to_talk_hotkey", "whisper_model",
-                 "whisper_device", "tts_voice", "tts_rate", "tts_pitch", "tts_voice_en", "speak_replies", "auto_briefing", "briefing_time", "humor", "mic_device", "speaker_device", "instant_ack", "asr_engine",
+                 "whisper_device", "tts_voice", "tts_rate", "tts_pitch", "tts_voice_en", "speak_replies", "auto_briefing", "briefing_time", "humor", "mic_device", "speaker_device", "instant_ack", "asr_engine", "voice_variant",
                  "tts_engine", "voice_tone", "voice_accent", "gemini_api_key", "gemini_voice", "gemini_tts_model",
                  "elevenlabs_api_key", "elevenlabs_voice_id",
                  "always_on_top", "update_repo", "update_branch", "github_token", "auto_update"]
@@ -190,6 +190,28 @@ class Api:
         s = self._a.store
         s.data["research"] = [r for r in s.data["research"] if r["id"] != rid]
         s.save()
+        return True
+
+    def ab_test_voice(self):
+        """Aceeași frază în 3 variante; numele variantei e spus de Emil (voce românească sigură)."""
+        a = self._a
+        if not a.mouth or not a.cfg["gemini_api_key"]:
+            return "Puneți cheia Gemini și apăsați Salvează."
+        import threading
+
+        def run():
+            m = a.mouth
+            sample = ("Bună ziua, domnule. Mâine va fi înnorat, cu cincisprezece grade, "
+                      "iar comanda nouă v-am trimis-o pe WhatsApp.")
+            for label, v in (("A", "studio"), ("B", "lang"), ("C", "nota")):
+                try:
+                    a.store.set_status("vorbeste", f"varianta {label}")
+                    m.play((m._synth_edge(f"Varianta {label}."), 24000))
+                    m.play((m.synth_variant(sample, v), 24000))
+                except Exception as e:
+                    a.store.log(f"Varianta {label}: {e}", "error")
+            a.idle_status()
+        threading.Thread(target=run, daemon=True).start()
         return True
 
     def compare_gemini_voices(self):

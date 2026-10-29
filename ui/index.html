@@ -253,6 +253,9 @@
         <label class="fld">Accent<input name="voice_accent" placeholder="neutru, din România"></label>
         <label class="fld">Cheie Gemini <a href="#" data-url="https://aistudio.google.com/apikey">(o iei gratuit de aici)</a>
           <input name="gemini_api_key" type="password" placeholder="AIza…"></label>
+        <button type="button" class="secondary wide" id="btnAB" style="margin-bottom:8px">🔤 Test accent: variantele A, B, C</button>
+        <label class="fld">Varianta aleasă după test
+          <select name="voice_variant"><option value="studio">A – exact ca în AI Studio</option><option value="lang">B – cu limba română fixată</option><option value="nota">C – cu notă „vorbitor nativ român”</option></select></label>
         <label class="fld">Model voce Gemini
           <select name="gemini_tts_model"><option value="gemini-3.8-flash-tts">Flash – calitate maximă</option><option value="gemini-3.8-flash-lite-tts">Flash Lite – mai rapid</option></select></label>
         <label class="fld">Voce Gemini

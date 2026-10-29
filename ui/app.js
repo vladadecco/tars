@@ -388,6 +388,7 @@ function bind() {
     if (typeof r === "string") { toast(r); return; }
     $("#compareHint").textContent = "Ascultați: " + r.voices.map((v, i) => `${i + 1} = ${v}`).join(", ") + ". Alegeți apoi din listă și apăsați Salvează.";
   };
+  $("#btnAB").onclick = async () => { const r = await api.ab_test_voice(); toast(typeof r === "string" ? r : "Ascultați A, B și C, apoi alegeți varianta"); };
   $("#btnTestVoice").onclick = async () => { const r = await api.test_voice(); toast(typeof r === "string" ? r : "Ascultați…"); };
   $("#btnUpdateNow").onclick = doUpdate;
 

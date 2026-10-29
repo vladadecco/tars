@@ -772,20 +772,39 @@ class Mouth:
                 GEMINI_POOL.release(conn, ok)
         return gen()
 
-    def _gemini_body(self, text: str) -> dict:
+    def _gemini_body(self, text: str, variant: str | None = None) -> dict:
+        """Variante (alegeți în Setări după test):
+        studio = exact ca în AI Studio; lang = + cod de limbă ro-RO; nota = + notă de regie în română."""
+        v = variant or self.cfg["voice_variant"]
+        prefix = ""
+        if v == "nota":
+            prefix = ("## Notă pentru actor:\nVorbitor nativ român din România. Accent românesc curat, "
+                      "fără nicio urmă de accent englezesc. Ton calm, cald, firesc.\n\n")
         body = {
-            # exact ca în AI Studio (unde vocea a sunat bine): doar textul, fără instrucțiuni lungi
-            "contents": [{"parts": [{"text": (self.style_prompt() + "\n\n" if self.cfg["voice_style_prompt"] else "")
-                                             + "## Transcript:\n" + text}]}],
+            "contents": [{"parts": [{"text": prefix + "## Transcript:\n" + text}]}],
             "generationConfig": {
                 "responseModalities": ["AUDIO"],
-                "speechConfig": {"languageCode": "ro-RO",  # altfel, la bucăți scurte, „ghicește” engleza
-                                 "voiceConfig": {"prebuiltVoiceConfig": {"voiceName": self.cfg["gemini_voice"]}}},
+                "temperature": 1.35 if v == "studio" else 1.0,
+                "speechConfig": {"voiceConfig": {"prebuiltVoiceConfig": {"voiceName": self.cfg["gemini_voice"]}}},
             },
         }
-        if getattr(self, "_no_lang", False):  # modelul nu acceptă codul de limbă: îl scoatem
-            body["generationConfig"]["speechConfig"].pop("languageCode", None)
+        if v in ("lang", "nota") and not getattr(self, "_no_lang", False):
+            body["generationConfig"]["speechConfig"]["languageCode"] = "ro-RO"
         return body
+
+    def synth_variant(self, text: str, variant: str):
+        """Pentru testul A/B din Setări: aceeași frază, altă variantă de cerere."""
+        import base64, json
+        conn, r = GEMINI_POOL.post(
+            f"/v1beta/models/{self.cfg['gemini_tts_model']}:generateContent",
+            json.dumps(self._gemini_body(text, variant)).encode("utf-8"),
+            {"Content-Type": "application/json", "x-goog-api-key": self.cfg["gemini_api_key"].strip()})
+        raw = r.read()
+        GEMINI_POOL.release(conn)
+        if r.status != 200:
+            raise RuntimeError(f"Gemini {r.status}: {raw[:200]!r}")
+        part = json.loads(raw)["candidates"][0]["content"]["parts"][0]["inlineData"]
+        return np.frombuffer(base64.b64decode(part["data"]), dtype=np.int16).astype(np.float32) / 32768.0
 
     def _lang_rejected(self, status, raw: bytes) -> bool:
         if status == 400 and b"anguage" in raw and not getattr(self, "_no_lang", False):
