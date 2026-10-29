@@ -54,6 +54,7 @@ DEFAULTS = {
     "tts_voice_en": "",            # gol = aceeași voce și pentru engleză
     "tts_pitch_en": "-6Hz",
     "speak_replies": True,
+    "instant_ack": True,           # „Imediat, domnule.” imediat după ce termini de vorbit
     "follow_up_seconds": 6,
     # Briefing
     "auto_briefing": True,

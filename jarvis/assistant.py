@@ -140,6 +140,12 @@ class Assistant:
                     self.store.set_briefing(reply)
                 if sess is not None:
                     sess.finish()
+                    tm = getattr(self, "_timing", None)
+                    if tm and sess.first_audio_at:
+                        total = sess.first_audio_at - tm["end"]
+                        self.store.log(f"⏱ Răspuns în {total:.1f} s (transcriere {tm['asr']:.1f} s, "
+                                       f"gândire + voce {total - tm['asr']:.1f} s)", "info")
+                    self._timing = None
                     if not sess.spoken_any:
                         self._speak(reply)
             except Exception as e:
@@ -189,6 +195,7 @@ class Assistant:
             self.idle_status()
             return
         self.idle_status()
+        threading.Thread(target=self.mouth.prepare_fillers, args=(DATA_DIR,), daemon=True).start()
         self._announce_update()
         self._maybe_start_briefing()
         while not self.stop_event.is_set():
@@ -216,8 +223,10 @@ class Assistant:
             if audio is None:
                 self.idle_status()
                 return
+            t_end = time.time()
             self.store.set_status("gandeste", "transcriu")
             text = self.ear.transcribe(audio)
+            t_asr = time.time()
             if not text:
                 self.idle_status()
                 return
@@ -228,6 +237,11 @@ class Assistant:
                 self.idle_status()
                 return
             self.end_followup = False
+            if self.cfg["instant_ack"] and self.cfg["speak_replies"]:
+                f = self.mouth.filler()
+                if f is not None:
+                    threading.Thread(target=self.mouth.play, args=((f, 24000),), daemon=True).start()
+            self._timing = {"end": t_end, "asr": t_asr - t_end}
             done = self.ask(text)
             done.wait()
             if self.end_followup:

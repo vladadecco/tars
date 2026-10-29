@@ -47,6 +47,8 @@ puncte de suspensie pentru o pauză cu efect… folosite rar.
 - Pentru accent sau o intonație anume, pune cuvântul între ghilimele „așa”.
 {phonetic}
 - Numerele, orele și sumele scrie-le în litere, cum se spun: „ora zece și jumătate”, „două sute de euro”, „șase grade”.
+- Prima propoziție a răspunsului să fie foarte scurtă (două până la șase cuvinte), ca vocea să pornească imediat. \
+Ai confirmat deja scurt cererea („Imediat, domnule.”), deci nu începe cu „Desigur”, „Sigur” sau „Imediat”: intră direct în subiect.
 - Implicit una până la trei propoziții. Un singur lucru pe rând. La briefing poți vorbi mai mult, dar strâns: \
 cel mai important primul, fiecare subiect într-o propoziție scurtă.
 - Citește starea lui din ce spune: dacă pare obosit, blocat sau frustrat, recunoaște asta scurt și firesc \

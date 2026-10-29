@@ -285,7 +285,7 @@ class Ear:
         return None
 
     # ---------------------------------------------------------------- înregistrare
-    def record(self, start_timeout=6.0, max_seconds=30.0, silence=0.8, stop: threading.Event | None = None):
+    def record(self, start_timeout=6.0, max_seconds=30.0, silence=0.6, stop: threading.Event | None = None):
         """Înregistrează până când utilizatorul tace. Întoarce None dacă nu a vorbit."""
         threshold = max(self.noise * 2.8, 350.0)
         frames, speaking, started_at = [], False, None
@@ -320,7 +320,7 @@ class Ear:
         return audio
 
     def transcribe(self, audio) -> str:
-        beam = 5 if getattr(self, "gpu", False) else 1
+        beam = 1  # viteză: diferența de calitate e mică, cu vocabularul de comenzi
         segments, _ = self.whisper.transcribe(
             audio, language="ro", beam_size=beam, best_of=1, vad_filter=True, without_timestamps=True,
             condition_on_previous_text=False, initial_prompt=ASR_PROMPT, hotwords=ASR_HOTWORDS)
@@ -400,10 +400,53 @@ def _trim_silence(a, thr=0.012, pad=1200):
     return a[max(0, idx[0] - pad): idx[-1] + pad]
 
 
+class _Pool:
+    """Conexiuni HTTPS refolosite: economisesc ~0,2 s la fiecare frază."""
+    def __init__(self, host):
+        import http.client
+        self.http = http.client
+        self.host = host
+        self.idle = []
+        self.lock = threading.Lock()
+
+    def post(self, path, body: bytes, headers: dict):
+        """Întoarce (conexiune, răspuns). Conexiunea se dă înapoi cu release() după citire."""
+        for attempt in range(2):
+            with self.lock:
+                c = self.idle.pop() if self.idle else None
+            if c is None:
+                c = self.http.HTTPSConnection(self.host, timeout=60)
+            try:
+                c.request("POST", path, body=body, headers=headers)
+                return c, c.getresponse()
+            except Exception:
+                try:
+                    c.close()
+                except Exception:
+                    pass
+                if attempt:
+                    raise
+
+    def release(self, c, ok=True):
+        if ok:
+            with self.lock:
+                self.idle.append(c)
+        else:
+            try:
+                c.close()
+            except Exception:
+                pass
+
+
+GEMINI_POOL = _Pool("generativelanguage.googleapis.com")
+FILLERS = ["Imediat, domnule.", "Desigur.", "O clipă.", "Da, domnule.", "Bineînțeles."]
+
+
 class SpeechSession:
     """Primește textul pe bucăți și vorbește fiecare propoziție de îndată ce e gata,
     sintetizând următoarea în timp ce o redă pe cea curentă."""
     END = re.compile(r"[.!?…:;]\s")
+    FIRST = re.compile(r"[.!?…:;,]\s")
 
     def __init__(self, mouth):
         self.m = mouth
@@ -412,6 +455,8 @@ class SpeechSession:
         self.audio = queue.Queue(maxsize=3)
         self.started = False
         self.spoken_any = False
+        self.put_any = False
+        self.first_audio_at = None
 
     def _start(self):
         if self.started:
@@ -421,6 +466,7 @@ class SpeechSession:
         self.m.speaking = True
         if self.m.mic:
             self.m.mic.muted = True
+        self._first_synth = True
         self.t1 = threading.Thread(target=self._synth_loop, daemon=True)
         self.t2 = threading.Thread(target=self._play_loop, daemon=True)
         self.t1.start()
@@ -429,9 +475,10 @@ class SpeechSession:
     def feed(self, chunk: str):
         self.buf += chunk
         while True:
-            m = self.END.search(self.buf)
-            # nu tăiem fraze prea scurte (ex. „Dl.”), dar nici nu așteptăm prea mult
-            if not m or (m.end() < 18 and len(self.buf) < 200):
+            first = not self.put_any
+            need = 12 if first else 18  # nu tăiem bucăți prea scurte (ex. „Dl.”)
+            m = next((x for x in (self.FIRST if first else self.END).finditer(self.buf) if x.end() >= need), None)
+            if not m:
                 break
             sent, self.buf = self.buf[:m.end()].strip(), self.buf[m.end():]
             self._put(sent)
@@ -440,6 +487,8 @@ class SpeechSession:
         sent = re.sub(r"[*#`_]+", "", sent).strip()
         if not sent:
             return
+        first = not self.put_any
+        self.put_any = True
         self._start()
         self.texts.put(sent)
 
@@ -450,7 +499,10 @@ class SpeechSession:
                 self.audio.put(None)
                 return
             try:
-                self.audio.put((t, self.m._synth(t)))
+                # prima frază: voce în flux (pornește înainte să fie gata toată fraza)
+                gen = self.m._synth_stream(t) if self._first_synth else None
+                self._first_synth = False
+                self.audio.put((t, gen if gen is not None else self.m._synth(t)))
             except Exception as e:
                 self.audio.put((t, e))
 
@@ -463,9 +515,14 @@ class SpeechSession:
                 continue
             t, a = item
             self.spoken_any = True
+            if self.first_audio_at is None:
+                self.first_audio_at = time.time()
             if isinstance(a, np.ndarray):
                 self.m.sd.play(a, 24000)
                 self.m.sd.wait()
+            elif hasattr(a, "__next__"):
+                if not self.m.play_stream(a):
+                    self.m._fallback(t)
             else:
                 self.m._fallback(t)
 
@@ -515,18 +572,116 @@ class Mouth:
             logging.getLogger("tars").warning("voce %s: %s (trec pe Edge)", engine, e)
         return self._synth_edge(text)
 
-    def style_prompt(self) -> str:
-        return VOICE_STYLE.format(accent=self.cfg["voice_accent"], ton=self.cfg["voice_tone"])
+    def play_stream(self, gen) -> bool:
+        """Redă bucăți de sunet pe măsură ce sosesc. False dacă nu a venit nimic."""
+        got = False
+        try:
+            with self.sd.OutputStream(samplerate=24000, channels=1, dtype="float32") as out:
+                for chunk in gen:
+                    if self._stop.is_set():
+                        break
+                    if len(chunk):
+                        got = True
+                        out.write(chunk.reshape(-1, 1))
+        except Exception as e:
+            import logging
+            logging.getLogger("tars").warning("redare în flux: %s", e)
+        return got
 
-    def _synth_gemini(self, text: str):
-        import base64, json, urllib.request, urllib.error
-        body = {
+    def _synth_stream(self, text: str):
+        """Generator de sunet în flux pentru Gemini; None dacă motorul nu e Gemini."""
+        if not (self.cfg["tts_engine"] == "gemini" and self.cfg["gemini_api_key"]
+                and time.time() > getattr(self, "_gemini_pause", 0)):
+            return None
+        plain = text.replace("⟦", "").replace("⟧", "")
+        import base64, json
+        body = json.dumps(self._gemini_body(plain)).encode("utf-8")
+        model = self.cfg["gemini_tts_model"]
+        conn, r = GEMINI_POOL.post(
+            f"/v1beta/models/{model}:streamGenerateContent?alt=sse", body,
+            {"Content-Type": "application/json", "x-goog-api-key": self.cfg["gemini_api_key"].strip()})
+        if r.status != 200:
+            r.read()
+            GEMINI_POOL.release(conn)
+            if r.status == 429:
+                self._gemini_pause = time.time() + 900
+            return None
+
+        def gen():
+            ok = True
+            try:
+                for raw in r:
+                    line = raw.decode("utf-8", "ignore").strip()
+                    if not line.startswith("data:"):
+                        continue
+                    d = json.loads(line[5:])
+                    for p in d.get("candidates", [{}])[0].get("content", {}).get("parts", []):
+                        if "inlineData" in p:
+                            pcm = base64.b64decode(p["inlineData"]["data"])
+                            yield np.frombuffer(pcm, dtype=np.int16).astype(np.float32) / 32768.0
+            except Exception:
+                ok = False
+            finally:
+                GEMINI_POOL.release(conn, ok)
+        return gen()
+
+    def _gemini_body(self, text: str) -> dict:
+        return {
             "contents": [{"parts": [{"text": self.style_prompt() + "\n\n## Transcript:\n" + text}]}],
             "generationConfig": {
                 "responseModalities": ["AUDIO"],
                 "speechConfig": {"voiceConfig": {"prebuiltVoiceConfig": {"voiceName": self.cfg["gemini_voice"]}}},
             },
         }
+
+    # ---- confirmări instant („Imediat, domnule.”), sintetizate o dată și ținute pe disc ----
+    def filler(self):
+        import random
+        key = f'{self.cfg["tts_engine"]}_{self.cfg["gemini_voice"] if self.cfg["tts_engine"] == "gemini" else self.cfg["tts_voice"]}'
+        cache = getattr(self, "_fillers", {})
+        if cache.get("key") != key:
+            return None
+        return random.choice(cache["audio"]) if cache.get("audio") else None
+
+    def prepare_fillers(self, data_dir):
+        key = f'{self.cfg["tts_engine"]}_{self.cfg["gemini_voice"] if self.cfg["tts_engine"] == "gemini" else self.cfg["tts_voice"]}'
+        path = data_dir / f"confirmari_{re.sub(r'[^A-Za-z0-9_-]', '_', key)}.npz"
+        audio = []
+        try:
+            if path.exists():
+                z = np.load(path)
+                audio = [z[k] for k in z.files]
+            else:
+                for f in FILLERS:
+                    audio.append(_trim_silence(self._synth(f)))
+                np.savez(path, *audio)
+        except Exception as e:
+            import logging
+            logging.getLogger("tars").warning("confirmări: %s", e)
+        self._fillers = {"key": key, "audio": audio}
+
+    def style_prompt(self) -> str:
+        return VOICE_STYLE.format(accent=self.cfg["voice_accent"], ton=self.cfg["voice_tone"])
+
+    def _synth_gemini(self, text: str):
+        import base64, json, urllib.request, urllib.error
+        body = self._gemini_body(text)
+        try:  # drumul rapid: conexiune deja deschisă
+            conn, r = GEMINI_POOL.post(
+                f"/v1beta/models/{self.cfg['gemini_tts_model']}:generateContent", json.dumps(body).encode("utf-8"),
+                {"Content-Type": "application/json", "x-goog-api-key": self.cfg["gemini_api_key"].strip()})
+            raw = r.read()
+            GEMINI_POOL.release(conn)
+            if r.status == 200:
+                part = json.loads(raw)["candidates"][0]["content"]["parts"][0]["inlineData"]
+                return np.frombuffer(base64.b64decode(part["data"]), dtype=np.int16).astype(np.float32) / 32768.0
+            if r.status == 429:
+                self._gemini_pause = time.time() + 900
+                raise RuntimeError("limita Gemini")
+        except RuntimeError:
+            raise
+        except Exception:
+            pass
         models = [self.cfg["gemini_tts_model"], "gemini-3.8-flash-tts", "gemini-3.8-flash-lite-tts",
                   "gemini-2.5-flash-preview-tts"]
         last = None
